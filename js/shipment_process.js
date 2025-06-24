@@ -3,17 +3,15 @@ const db = firebase.database();
 
 // Variáveis globais
 let currentUser = null;
-let currentProcess = null;
+let activeProcesses = {};
 let currentScanner = null;
-let currentProcessRef = null;
-let processSteps = [];
-let processTimer = null;
+let currentScannerType = null;
 
 // Elementos da página
 const elements = {
     // Botões principais
     startShipmentProcessBtn: document.getElementById('startShipmentProcessBtn'),
-    processSteps: document.getElementById('processSteps'),
+    processList: document.getElementById('processList'),
     currentUser: document.getElementById('currentUser'),
     
     // Modal Iniciar Processo
@@ -53,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = user;
             elements.currentUser.textContent = user.displayName || user.email;
             setupEventListeners();
+            loadActiveProcesses();
         }
     });
 });
@@ -86,34 +85,159 @@ function setupEventListeners() {
             window.location.href = 'index.html';
         });
     });
-    
-    // Fechar modais
-    document.querySelectorAll('.close-modal').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.modal').forEach(modal => {
-                modal.style.display = 'none';
-            });
-            stopScanner();
+}
+
+function loadActiveProcesses() {
+    db.ref('shipment_processes').on('value', snapshot => {
+        activeProcesses = {};
+        elements.processList.innerHTML = '';
+        
+        snapshot.forEach(processSnapshot => {
+            const process = processSnapshot.val();
+            activeProcesses[processSnapshot.key] = process;
+            renderProcess(processSnapshot.key, process);
         });
     });
 }
 
-function startScanner(type) {
-    stopScanner();
+function renderProcess(processId, process) {
+    const processElement = document.createElement('div');
+    processElement.className = 'process-card';
+    processElement.dataset.processId = processId;
     
-    let scannerElement;
-    if (type === 'startProcess') {
-        scannerElement = elements.startProcessScanner;
-    } else {
-        scannerElement = elements.qrCodeScanner;
+    const stepsHtml = Object.entries(process.steps).map(([stepId, step]) => {
+        const statusClass = step.status === 'completed' ? 'completed' : 
+                          step.status === 'in_progress' ? 'in-progress' : 'pending';
+        
+        const startTime = process[`${stepId}_startTime`] || null;
+        const endTime = process[`${stepId}_endTime`] || null;
+        
+        let timeText = '';
+        if (startTime && !endTime) {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            timeText = `⏱️ ${formatTime(elapsed)}`;
+        } else if (startTime && endTime) {
+            const duration = Math.floor((endTime - startTime) / 1000);
+            timeText = `⏱️ ${formatTime(duration)}`;
+        }
+        
+        return `
+            <div class="step ${statusClass}">
+                <div class="step-header">
+                    <span class="step-title">${step.name}</span>
+                    <span class="step-status">${getStatusLabel(step.status)}</span>
+                </div>
+                ${timeText ? `<div class="step-time">${timeText}</div>` : ''}
+                ${step.status === 'in_progress' ? `
+                <button class="btn primary-btn action-step-btn" data-action="complete" data-step="${stepId}">
+                    Finalizar Etapa
+                </button>` : ''}
+                ${step.status === 'pending' && isNextStep(process, stepId) ? `
+                <button class="btn secondary-btn action-step-btn" data-action="start" data-step="${stepId}">
+                    Iniciar Etapa
+                </button>` : ''}
+            </div>
+        `;
+    }).join('');
+    
+    processElement.innerHTML = `
+        <div class="process-header">
+            <h3>${process.shipmentNumber} (${process.transportType === 'maritimo' ? 'Marítimo' : 'Rodoviário'})</h3>
+            <div class="process-status ${process.status}">${getStatusLabel(process.status)}</div>
+        </div>
+        <div class="process-steps">
+            ${stepsHtml}
+        </div>
+        ${process.status === 'in_progress' ? `
+        <div class="process-actions">
+            <button class="btn danger-btn cancel-process-btn">Cancelar Processo</button>
+        </div>` : ''}
+    `;
+    
+    // Adicionar event listeners para os botões de ação
+    processElement.querySelectorAll('.action-step-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            const stepId = e.target.dataset.step;
+            handleStepAction(processId, stepId, action);
+        });
+    });
+    
+    // Adicionar event listener para cancelar processo
+    const cancelBtn = processElement.querySelector('.cancel-process-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            if (confirm('Tem certeza que deseja cancelar este processo?')) {
+                cancelProcess(processId);
+            }
+        });
     }
     
+    elements.processList.appendChild(processElement);
+}
+
+function isNextStep(process, stepId) {
+    const stepsOrder = getStepsOrder(process.transportType);
+    const currentIndex = stepsOrder.indexOf(stepId);
+    
+    // Verificar se todas as etapas anteriores estão completas
+    for (let i = 0; i < currentIndex; i++) {
+        const prevStepId = stepsOrder[i];
+        if (process.steps[prevStepId].status !== 'completed') {
+            return false;
+        }
+    }
+    
+    // Verificar se esta etapa ainda está pendente
+    return process.steps[stepId].status === 'pending';
+}
+
+function getStepsOrder(transportType) {
+    const baseSteps = [
+        'truck_opening',
+        'loading',
+        'truck_closing',
+        'awaiting_seal'
+    ];
+    
+    if (transportType === 'rodoviario') {
+        baseSteps.splice(2, 0, 'pre_belt');
+    }
+    
+    return baseSteps;
+}
+
+function handleStepAction(processId, stepId, action) {
+    const processRef = db.ref(`shipment_processes/${processId}`);
+    
+    if (action === 'start') {
+        // Iniciar etapa
+        const updates = {
+            [`steps/${stepId}/status`]: 'in_progress',
+            [`${stepId}_startTime`]: firebase.database.ServerValue.TIMESTAMP,
+            currentStep: stepId
+        };
+        
+        processRef.update(updates)
+            .then(() => {
+                showQrCodeModal(`Confirmar início: ${activeProcesses[processId].steps[stepId].name}`, processId, stepId, 'start');
+            });
+    } else if (action === 'complete') {
+        // Finalizar etapa
+        showQrCodeModal(`Confirmar conclusão: ${activeProcesses[processId].steps[stepId].name}`, processId, stepId, 'complete');
+    }
+}
+
+function startScanner(type) {
+    stopScanner();
+    currentScannerType = type;
+    
+    let scannerElement = type === 'startProcess' ? elements.startProcessScanner : elements.qrCodeScanner;
     scannerElement.style.display = 'block';
+    
     currentScanner = new Instascan.Scanner({
         video: scannerElement,
-        mirror: false,
-        scanPeriod: 1,
-        backgroundScan: false
+        mirror: false
     });
     
     currentScanner.addListener('scan', content => {
@@ -126,18 +250,11 @@ function startScanner(type) {
                 throw new Error('Nenhuma câmera encontrada');
             }
             
-            // Sempre tentar usar a câmera traseira
-            const rearCamera = cameras.find(c => c.name.includes('traseira') || 
-                             c.name.includes('rear') || 
-                             c.name.includes('back')) || 
+            const rearCamera = cameras.find(c => c.name.includes('traseira')) || 
                              cameras.find(c => c.facing === 'environment') || 
                              cameras[cameras.length - 1];
             
             return currentScanner.start(rearCamera);
-        })
-        .then(() => {
-            showFeedback('Scanner iniciado com sucesso', 'success', 
-                       type === 'startProcess' ? 'startProcessFeedback' : 'qrCodeFeedback');
         })
         .catch(error => {
             console.error('Erro ao iniciar scanner:', error);
@@ -209,146 +326,58 @@ function startShipmentProcess() {
         return;
     }
 
-    // Verificar se já existe um processo em andamento para este número de remessa
+    // Verificar se já existe um processo com este número
     db.ref('shipment_processes').orderByChild('shipmentNumber').equalTo(shipmentNumber).once('value')
         .then(snapshot => {
             if (snapshot.exists()) {
-                throw new Error('Já existe um processo em andamento com este número de remessa');
+                throw new Error('Já existe um processo com este número de remessa');
             }
 
-            elements.confirmStartProcessBtn.disabled = true;
+            // Criar estrutura do processo
+            const steps = {
+                truck_opening: { name: 'Abertura do Caminhão', status: 'pending' },
+                loading: { name: 'Carregamento do Caminhão', status: 'pending' }
+            };
 
-            // Definir etapas do processo baseadas no tipo de transporte
-            const baseSteps = [
-                { id: 'truck_opening', name: 'Abertura do Caminhão', status: 'pending', startTime: null, endTime: null },
-                { id: 'loading', name: 'Carregamento do Caminhão', status: 'pending', startTime: null, endTime: null },
-                { id: 'truck_closing', name: 'Fechamento do Caminhão', status: 'pending', startTime: null, endTime: null },
-                { id: 'awaiting_seal', name: 'Aguardando Lacre', status: 'pending', startTime: null, endTime: null }
-            ];
-
-            // Adicionar etapa específica para rodoviário
             if (transportType === 'rodoviario') {
-                baseSteps.splice(2, 0, { id: 'pre_belt', name: 'Pré-Cinto', status: 'pending', startTime: null, endTime: null });
+                steps.pre_belt = { name: 'Pré-Cinto', status: 'pending' };
             }
+
+            steps.truck_closing = { name: 'Fechamento do Caminhão', status: 'pending' };
+            steps.awaiting_seal = { name: 'Aguardando Lacre', status: 'pending' };
 
             const newProcess = {
                 operatorName,
                 shipmentNumber,
                 transportType,
-                status: 'pending', // Inicia como pendente até confirmar o operador
-                currentStep: null,
-                steps: {},
-                startTime: null, // Será definido após confirmação
-                createdBy: currentUser.uid
+                status: 'pending',
+                steps,
+                createdBy: currentUser.uid,
+                createdAt: firebase.database.ServerValue.TIMESTAMP
             };
 
-            // Preparar os passos
-            baseSteps.forEach(step => {
-                newProcess.steps[step.id] = {
-                    name: step.name,
-                    status: step.status
-                };
-            });
-
-            currentProcessRef = db.ref('shipment_processes').push();
-            
-            // Primeiro salva o processo como pendente
-            return currentProcessRef.set(newProcess);
+            // Salvar processo
+            const processRef = db.ref('shipment_processes').push();
+            return processRef.set(newProcess);
         })
         .then(() => {
-            // Mostra modal para confirmar o operador que está iniciando o processo
-            showQrCodeModal('Confirmar Início do Processo', 'process_start');
+            showFeedback('Processo criado com sucesso!', 'success', 'startProcessFeedback');
+            setTimeout(() => {
+                elements.startProcessModal.style.display = 'none';
+                resetStartProcessForm();
+            }, 1500);
         })
         .catch(error => {
             console.error('Erro ao iniciar processo:', error);
-            showFeedback('Erro ao iniciar processo: ' + error.message, 'error', 'startProcessFeedback');
-            elements.confirmStartProcessBtn.disabled = false;
+            showFeedback('Erro: ' + error.message, 'error', 'startProcessFeedback');
         });
 }
 
-function renderProcessSteps() {
-    if (!currentProcess) return;
-    
-    elements.processSteps.innerHTML = '';
-    
-    Object.entries(currentProcess.steps).forEach(([stepId, step]) => {
-        const stepElement = document.createElement('div');
-        stepElement.className = 'step';
-        stepElement.dataset.stepId = stepId;
-        
-        const statusClass = step.status === 'completed' ? 'completed' : 
-                          step.status === 'in_progress' ? 'in-progress' : 'pending';
-        
-        const startTime = currentProcess[`${stepId}_startTime`] || null;
-        const endTime = currentProcess[`${stepId}_endTime`] || null;
-        
-        let timeText = '';
-        if (startTime && !endTime) {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            timeText = `Tempo decorrido: ${formatTime(elapsed)}`;
-        } else if (startTime && endTime) {
-            const duration = Math.floor((endTime - startTime) / 1000);
-            timeText = `Tempo total: ${formatTime(duration)}`;
-        }
-        
-        stepElement.innerHTML = `
-            <div class="step-header">
-                <div class="step-title">${step.name}</div>
-                <div class="step-status ${statusClass}">${getStatusLabel(step.status)}</div>
-            </div>
-            ${timeText ? `<div class="step-time">${timeText}</div>` : ''}
-            <div class="step-actions" style="display: ${step.status === 'in_progress' ? 'flex' : 'none'}">
-                <button class="btn primary-btn finish-step-btn">Finalizar Etapa</button>
-            </div>
-        `;
-        
-        elements.processSteps.appendChild(stepElement);
-        
-        // Adicionar event listener para o botão de finalizar etapa
-        if (step.status === 'in_progress') {
-            stepElement.querySelector('.finish-step-btn').addEventListener('click', () => {
-                showQrCodeModal(`Finalizar ${step.name}`, stepId);
-            });
-        }
-    });
-}
-
-function startNextStep() {
-    if (!currentProcess) return;
-    
-    // Encontrar a primeira etapa pendente
-    const nextStep = Object.entries(currentProcess.steps).find(([_, step]) => 
-        step.status === 'pending');
-    
-    if (nextStep) {
-        const [stepId, step] = nextStep;
-        
-        // Atualizar status da etapa
-        const updates = {
-            [`steps/${stepId}/status`]: 'in_progress',
-            [`${stepId}_startTime`]: firebase.database.ServerValue.TIMESTAMP,
-            currentStep: stepId
-        };
-        
-        currentProcessRef.update(updates)
-            .then(() => {
-                // Mostrar modal de QR code para iniciar a etapa
-                showQrCodeModal(`Iniciar ${step.name}`, stepId);
-            });
-    } else {
-        // Todas as etapas concluídas
-        currentProcessRef.update({
-            status: 'completed',
-            endTime: firebase.database.ServerValue.TIMESTAMP
-        }).then(() => {
-            saveProcessHistory();
-        });
-    }
-}
-
-function showQrCodeModal(title, stepId) {
+function showQrCodeModal(title, processId, stepId, action) {
     elements.qrCodeModalTitle.textContent = title;
+    elements.qrCodeModal.dataset.processId = processId;
     elements.qrCodeModal.dataset.stepId = stepId;
+    elements.qrCodeModal.dataset.action = action;
     
     // Resetar o modal
     elements.qrCodeOperatorName.textContent = '';
@@ -360,7 +389,9 @@ function showQrCodeModal(title, stepId) {
 }
 
 function confirmCurrentStep() {
+    const processId = elements.qrCodeModal.dataset.processId;
     const stepId = elements.qrCodeModal.dataset.stepId;
+    const action = elements.qrCodeModal.dataset.action;
     const operatorName = elements.qrCodeOperatorName.textContent;
     
     if (!operatorName) {
@@ -369,114 +400,106 @@ function confirmCurrentStep() {
     }
     
     elements.confirmQrCodeBtn.disabled = true;
+    const processRef = db.ref(`shipment_processes/${processId}`);
     
-    // Verificar se estamos confirmando o início do processo ou uma etapa
-    if (stepId === 'process_start') {
+    const updates = {};
+    const now = firebase.database.ServerValue.TIMESTAMP;
+    
+    if (action === 'start') {
         // Confirmar início do processo
-        const updates = {
-            status: 'in_progress',
-            startTime: firebase.database.ServerValue.TIMESTAMP,
-            startConfirmedBy: operatorName,
-            startConfirmedAt: firebase.database.ServerValue.TIMESTAMP
-        };
+        updates.status = 'in_progress';
+        updates.startTime = now;
+        updates.startConfirmedBy = operatorName;
+        updates.startConfirmedAt = now;
         
-        currentProcessRef.update(updates)
-            .then(() => {
-                showFeedback('Processo iniciado com sucesso!', 'success', 'qrCodeFeedback');
-                setTimeout(() => {
-                    elements.qrCodeModal.style.display = 'none';
-                    elements.startProcessModal.style.display = 'none';
-                    resetStartProcessForm();
-                    
-                    // Monitorar mudanças no processo
-                    currentProcessRef.on('value', snapshot => {
-                        if (snapshot.exists()) {
-                            currentProcess = snapshot.val();
-                            renderProcessSteps();
-                        }
-                    });
-                    
-                    // Iniciar primeira etapa
-                    startNextStep();
-                }, 1500);
-            })
-            .catch(error => {
-                console.error('Erro ao confirmar início do processo:', error);
-                showFeedback('Erro: ' + error.message, 'error', 'qrCodeFeedback');
-                elements.confirmQrCodeBtn.disabled = false;
-            });
-    } else {
-        // Verificar se estamos iniciando ou finalizando a etapa
-        const step = currentProcess.steps[stepId];
-        const isStarting = step.status === 'in_progress' && !currentProcess[`${stepId}_startTime`];
+        // Iniciar primeira etapa
+        const firstStepId = getStepsOrder(activeProcesses[processId].transportType)[0];
+        updates[`steps/${firstStepId}/status`] = 'in_progress';
+        updates[`${firstStepId}_startTime`] = now;
+        updates.currentStep = firstStepId;
+    } 
+    else if (action === 'complete') {
+        // Finalizar etapa atual
+        updates[`steps/${stepId}/status`] = 'completed';
+        updates[`${stepId}_endTime`] = now;
+        updates[`${stepId}_endConfirmedBy`] = operatorName;
+        updates[`${stepId}_endConfirmedAt`] = now;
+        updates.currentStep = null;
         
-        const updates = {};
+        // Iniciar próxima etapa se houver
+        const stepsOrder = getStepsOrder(activeProcesses[processId].transportType);
+        const currentIndex = stepsOrder.indexOf(stepId);
+        const nextStepId = stepsOrder[currentIndex + 1];
         
-        if (isStarting) {
-            // Confirmar início da etapa
-            updates[`${stepId}_startConfirmedBy`] = operatorName;
-            updates[`${stepId}_startConfirmedAt`] = firebase.database.ServerValue.TIMESTAMP;
+        if (nextStepId) {
+            updates[`steps/${nextStepId}/status`] = 'in_progress';
+            updates[`${nextStepId}_startTime`] = now;
+            updates.currentStep = nextStepId;
         } else {
-            // Finalizar etapa
-            updates[`steps/${stepId}/status`] = 'completed';
-            updates[`${stepId}_endTime`] = firebase.database.ServerValue.TIMESTAMP;
-            updates[`${stepId}_endConfirmedBy`] = operatorName;
-            updates[`${stepId}_endConfirmedAt`] = firebase.database.ServerValue.TIMESTAMP;
-            updates.currentStep = null;
+            // Todas as etapas concluídas
+            updates.status = 'completed';
+            updates.endTime = now;
         }
-        
-        currentProcessRef.update(updates)
-            .then(() => {
-                showFeedback('Operação confirmada com sucesso!', 'success', 'qrCodeFeedback');
-                setTimeout(() => {
-                    elements.qrCodeModal.style.display = 'none';
-                    
-                    if (!isStarting) {
-                        // Iniciar próxima etapa
-                        startNextStep();
-                    }
-                }, 1500);
-            })
-            .catch(error => {
-                console.error('Erro ao confirmar etapa:', error);
-                showFeedback('Erro: ' + error.message, 'error', 'qrCodeFeedback');
-                elements.confirmQrCodeBtn.disabled = false;
-            });
     }
+    
+    processRef.update(updates)
+        .then(() => {
+            showFeedback('Operação confirmada com sucesso!', 'success', 'qrCodeFeedback');
+            setTimeout(() => {
+                elements.qrCodeModal.style.display = 'none';
+            }, 1500);
+            
+            // Se foi a última etapa, salvar no histórico
+            if (action === 'complete' && !updates.currentStep) {
+                saveProcessToHistory(processId);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao confirmar etapa:', error);
+            showFeedback('Erro: ' + error.message, 'error', 'qrCodeFeedback');
+            elements.confirmQrCodeBtn.disabled = false;
+        });
 }
 
-function saveProcessHistory() {
-    if (!currentProcess || !currentProcessRef) return;
+function saveProcessToHistory(processId) {
+    const process = activeProcesses[processId];
+    if (!process) return;
     
     const historyData = {
-        processId: currentProcessRef.key,
-        operatorName: currentProcess.operatorName,
-        shipmentNumber: currentProcess.shipmentNumber,
-        transportType: currentProcess.transportType,
-        startTime: currentProcess.startTime,
-        endTime: currentProcess.endTime,
-        steps: {}
+        processId,
+        operatorName: process.operatorName,
+        shipmentNumber: process.shipmentNumber,
+        transportType: process.transportType,
+        startTime: process.startTime,
+        endTime: process.endTime || firebase.database.ServerValue.TIMESTAMP,
+        steps: {},
+        totalDuration: (process.endTime || Date.now()) - process.startTime
     };
     
     // Calcular tempos para cada etapa
-    Object.keys(currentProcess.steps).forEach(stepId => {
+    Object.keys(process.steps).forEach(stepId => {
         historyData.steps[stepId] = {
-            name: currentProcess.steps[stepId].name,
-            startTime: currentProcess[`${stepId}_startTime`],
-            endTime: currentProcess[`${stepId}_endTime`],
-            duration: currentProcess[`${stepId}_endTime`] - currentProcess[`${stepId}_startTime`]
+            name: process.steps[stepId].name,
+            startTime: process[`${stepId}_startTime`],
+            endTime: process[`${stepId}_endTime`],
+            duration: process[`${stepId}_endTime`] - process[`${stepId}_startTime`]
         };
     });
     
-    // Calcular tempo total
-    historyData.totalDuration = currentProcess.endTime - currentProcess.startTime;
-    
     db.ref('shipment_history').push(historyData)
         .then(() => {
-            currentProcessRef.remove();
-            currentProcess = null;
-            currentProcessRef = null;
-            alert('Processo concluído e salvo no histórico!');
+            db.ref(`shipment_processes/${processId}`).remove();
+        });
+}
+
+function cancelProcess(processId) {
+    db.ref(`shipment_processes/${processId}`).remove()
+        .then(() => {
+            showFeedback('Processo cancelado com sucesso!', 'success', 'qrCodeFeedback');
+        })
+        .catch(error => {
+            console.error('Erro ao cancelar processo:', error);
+            showFeedback('Erro ao cancelar processo: ' + error.message, 'error', 'qrCodeFeedback');
         });
 }
 
@@ -497,18 +520,8 @@ function showFeedback(message, type, elementId) {
 
     feedbackElement.textContent = message;
     feedbackElement.style.display = 'block';
+    feedbackElement.className = `feedback ${type}`;
     
-    // Configurar cores baseadas no tipo
-    const colors = {
-        error: { bg: '#ffebee', text: '#c62828' },
-        success: { bg: '#e8f5e9', text: '#2e7d32' },
-        info: { bg: '#e3f2fd', text: '#1565c0' }
-    };
-    
-    feedbackElement.style.backgroundColor = colors[type]?.bg || '#f5f5f5';
-    feedbackElement.style.color = colors[type]?.text || '#333';
-    
-    // Esconder após alguns segundos
     if (type !== 'info') {
         setTimeout(() => {
             feedbackElement.style.display = 'none';
@@ -517,11 +530,9 @@ function showFeedback(message, type, elementId) {
 }
 
 function formatTime(seconds) {
-    if (!seconds) return '00:00:00';
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
