@@ -209,65 +209,59 @@ function startShipmentProcess() {
         return;
     }
 
-    elements.confirmStartProcessBtn.disabled = true;
+    // Verificar se já existe um processo em andamento para este número de remessa
+    db.ref('shipment_processes').orderByChild('shipmentNumber').equalTo(shipmentNumber).once('value')
+        .then(snapshot => {
+            if (snapshot.exists()) {
+                throw new Error('Já existe um processo em andamento com este número de remessa');
+            }
 
-    // Definir etapas do processo
-    processSteps = [
-        { id: 'truck_opening', name: 'Abertura do Caminhão', status: 'pending', startTime: null, endTime: null },
-        { id: 'loading', name: 'Carregamento do Caminhão', status: 'pending', startTime: null, endTime: null },
-        { id: 'truck_closing', name: 'Fechamento do Caminhão', status: 'pending', startTime: null, endTime: null }
-    ];
+            elements.confirmStartProcessBtn.disabled = true;
 
-    // Adicionar pré-cinto apenas para rodoviário
-    if (transportType === 'rodoviario') {
-        processSteps.splice(3, 0, 
-            { id: 'pre_belt', name: 'Pré-Cinto', status: 'pending', startTime: null, endTime: null });
-    }
+            // Definir etapas do processo baseadas no tipo de transporte
+            const baseSteps = [
+                { id: 'truck_opening', name: 'Abertura do Caminhão', status: 'pending', startTime: null, endTime: null },
+                { id: 'loading', name: 'Carregamento do Caminhão', status: 'pending', startTime: null, endTime: null },
+                { id: 'truck_closing', name: 'Fechamento do Caminhão', status: 'pending', startTime: null, endTime: null },
+                { id: 'awaiting_seal', name: 'Aguardando Lacre', status: 'pending', startTime: null, endTime: null }
+            ];
 
-    // Adicionar etapa de aguardo de lacre
-    processSteps.push(
-        { id: 'awaiting_seal', name: 'Aguardando Lacre', status: 'pending', startTime: null, endTime: null }
-    );
+            // Adicionar etapa específica para rodoviário
+            if (transportType === 'rodoviario') {
+                baseSteps.splice(2, 0, { id: 'pre_belt', name: 'Pré-Cinto', status: 'pending', startTime: null, endTime: null });
+            }
 
-    const newProcess = {
-        operatorName,
-        shipmentNumber,
-        transportType,
-        status: 'in_progress',
-        currentStep: null,
-        steps: processSteps.reduce((acc, step) => {
-            acc[step.id] = { name: step.name, status: step.status };
-            return acc;
-        }, {}),
-        startTime: firebase.database.ServerValue.TIMESTAMP,
-        createdBy: currentUser.uid
-    };
+            const newProcess = {
+                operatorName,
+                shipmentNumber,
+                transportType,
+                status: 'pending', // Inicia como pendente até confirmar o operador
+                currentStep: null,
+                steps: {},
+                startTime: null, // Será definido após confirmação
+                createdBy: currentUser.uid
+            };
 
-    currentProcessRef = db.ref('shipment_processes').push();
-    currentProcessRef.set(newProcess)
+            // Preparar os passos
+            baseSteps.forEach(step => {
+                newProcess.steps[step.id] = {
+                    name: step.name,
+                    status: step.status
+                };
+            });
+
+            currentProcessRef = db.ref('shipment_processes').push();
+            
+            // Primeiro salva o processo como pendente
+            return currentProcessRef.set(newProcess);
+        })
         .then(() => {
-            showFeedback('Processo iniciado com sucesso!', 'success', 'startProcessFeedback');
-            setTimeout(() => {
-                elements.startProcessModal.style.display = 'none';
-                resetStartProcessForm();
-                
-                // Monitorar mudanças no processo
-                currentProcessRef.on('value', snapshot => {
-                    if (snapshot.exists()) {
-                        currentProcess = snapshot.val();
-                        renderProcessSteps();
-                    }
-                });
-                
-                // Iniciar primeira etapa
-                startNextStep();
-            }, 1500);
+            // Mostra modal para confirmar o operador que está iniciando o processo
+            showQrCodeModal('Confirmar Início do Processo', 'process_start');
         })
         .catch(error => {
             console.error('Erro ao iniciar processo:', error);
             showFeedback('Erro ao iniciar processo: ' + error.message, 'error', 'startProcessFeedback');
-        })
-        .finally(() => {
             elements.confirmStartProcessBtn.disabled = false;
         });
 }
@@ -376,42 +370,79 @@ function confirmCurrentStep() {
     
     elements.confirmQrCodeBtn.disabled = true;
     
-    // Verificar se estamos iniciando ou finalizando a etapa
-    const step = currentProcess.steps[stepId];
-    const isStarting = step.status === 'in_progress' && !currentProcess[`${stepId}_startTime`];
-    
-    const updates = {};
-    
-    if (isStarting) {
-        // Confirmar início da etapa
-        updates[`${stepId}_startConfirmedBy`] = operatorName;
-        updates[`${stepId}_startConfirmedAt`] = firebase.database.ServerValue.TIMESTAMP;
-    } else {
-        // Finalizar etapa
-        updates[`steps/${stepId}/status`] = 'completed';
-        updates[`${stepId}_endTime`] = firebase.database.ServerValue.TIMESTAMP;
-        updates[`${stepId}_endConfirmedBy`] = operatorName;
-        updates[`${stepId}_endConfirmedAt`] = firebase.database.ServerValue.TIMESTAMP;
-        updates.currentStep = null;
-    }
-    
-    currentProcessRef.update(updates)
-        .then(() => {
-            showFeedback('Operação confirmada com sucesso!', 'success', 'qrCodeFeedback');
-            setTimeout(() => {
-                elements.qrCodeModal.style.display = 'none';
-                
-                if (!isStarting) {
-                    // Iniciar próxima etapa
+    // Verificar se estamos confirmando o início do processo ou uma etapa
+    if (stepId === 'process_start') {
+        // Confirmar início do processo
+        const updates = {
+            status: 'in_progress',
+            startTime: firebase.database.ServerValue.TIMESTAMP,
+            startConfirmedBy: operatorName,
+            startConfirmedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        currentProcessRef.update(updates)
+            .then(() => {
+                showFeedback('Processo iniciado com sucesso!', 'success', 'qrCodeFeedback');
+                setTimeout(() => {
+                    elements.qrCodeModal.style.display = 'none';
+                    elements.startProcessModal.style.display = 'none';
+                    resetStartProcessForm();
+                    
+                    // Monitorar mudanças no processo
+                    currentProcessRef.on('value', snapshot => {
+                        if (snapshot.exists()) {
+                            currentProcess = snapshot.val();
+                            renderProcessSteps();
+                        }
+                    });
+                    
+                    // Iniciar primeira etapa
                     startNextStep();
-                }
-            }, 1500);
-        })
-        .catch(error => {
-            console.error('Erro ao confirmar etapa:', error);
-            showFeedback('Erro: ' + error.message, 'error', 'qrCodeFeedback');
-            elements.confirmQrCodeBtn.disabled = false;
-        });
+                }, 1500);
+            })
+            .catch(error => {
+                console.error('Erro ao confirmar início do processo:', error);
+                showFeedback('Erro: ' + error.message, 'error', 'qrCodeFeedback');
+                elements.confirmQrCodeBtn.disabled = false;
+            });
+    } else {
+        // Verificar se estamos iniciando ou finalizando a etapa
+        const step = currentProcess.steps[stepId];
+        const isStarting = step.status === 'in_progress' && !currentProcess[`${stepId}_startTime`];
+        
+        const updates = {};
+        
+        if (isStarting) {
+            // Confirmar início da etapa
+            updates[`${stepId}_startConfirmedBy`] = operatorName;
+            updates[`${stepId}_startConfirmedAt`] = firebase.database.ServerValue.TIMESTAMP;
+        } else {
+            // Finalizar etapa
+            updates[`steps/${stepId}/status`] = 'completed';
+            updates[`${stepId}_endTime`] = firebase.database.ServerValue.TIMESTAMP;
+            updates[`${stepId}_endConfirmedBy`] = operatorName;
+            updates[`${stepId}_endConfirmedAt`] = firebase.database.ServerValue.TIMESTAMP;
+            updates.currentStep = null;
+        }
+        
+        currentProcessRef.update(updates)
+            .then(() => {
+                showFeedback('Operação confirmada com sucesso!', 'success', 'qrCodeFeedback');
+                setTimeout(() => {
+                    elements.qrCodeModal.style.display = 'none';
+                    
+                    if (!isStarting) {
+                        // Iniciar próxima etapa
+                        startNextStep();
+                    }
+                }, 1500);
+            })
+            .catch(error => {
+                console.error('Erro ao confirmar etapa:', error);
+                showFeedback('Erro: ' + error.message, 'error', 'qrCodeFeedback');
+                elements.confirmQrCodeBtn.disabled = false;
+            });
+    }
 }
 
 function saveProcessHistory() {
