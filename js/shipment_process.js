@@ -276,14 +276,7 @@ function addStepButtons(container, process) {
 }
 
 function showNoProcessesMessage() {
-    elements.processCardsContainer.innerHTML = `
-        <div class="no-processes">
-            <p>Nenhum processo de shipment ativo</p>
-            <button class="btn primary-btn" id="startShipmentProcessBtn">
-                <i class="fas fa-plus"></i> Criar Novo Shipment
-            </button>
-        </div>
-    `;
+
 }
 
 function startProcessTimer(processId, startTime) {
