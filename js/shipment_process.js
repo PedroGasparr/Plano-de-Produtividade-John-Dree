@@ -3,19 +3,34 @@ const db = firebase.database();
 
 // Variáveis globais
 let currentUser = null;
-let activeProcesses = {};
+let currentProcess = null;
 let currentScanner = null;
-let currentScannerType = null;
+let currentTimer = null;
+let stepTimer = null;
+let totalTimeInterval = null;
+let stepTimeInterval = null;
 
 // Elementos da página
 const elements = {
-    // Botões principais
+    // Main elements
     startShipmentProcessBtn: document.getElementById('startShipmentProcessBtn'),
-    processList: document.getElementById('processList'),
     currentUser: document.getElementById('currentUser'),
+    mainActionButtons: document.getElementById('mainActionButtons'),
+    currentProcessContainer: document.getElementById('currentProcessContainer'),
+    currentShipmentNumber: document.getElementById('currentShipmentNumber'),
+    currentProcessStatus: document.getElementById('currentProcessStatus'),
+    currentStepName: document.getElementById('currentStepName'),
+    currentStepActions: document.getElementById('currentStepActions'),
+    totalTime: document.getElementById('totalTime'),
+    stepTime: document.getElementById('stepTime'),
+    cancelProcessBtn: document.getElementById('cancelProcessBtn'),
     
-    // Modal Iniciar Processo
+    // Modals
     startProcessModal: document.getElementById('startProcessModal'),
+    qrCodeModal: document.getElementById('qrCodeModal'),
+    sealModal: document.getElementById('sealModal'),
+    
+    // Start Process Modal
     startProcessScanner: document.getElementById('startProcessScanner'),
     startProcessScannerBtn: document.getElementById('startProcessScannerBtn'),
     operatorName: document.getElementById('operatorName'),
@@ -26,8 +41,7 @@ const elements = {
     cancelStartProcessBtn: document.getElementById('cancelStartProcessBtn'),
     startProcessFeedback: document.getElementById('startProcessFeedback'),
     
-    // Modal QR Code Genérico
-    qrCodeModal: document.getElementById('qrCodeModal'),
+    // QR Code Modal
     qrCodeModalTitle: document.getElementById('qrCodeModalTitle'),
     qrCodeScanner: document.getElementById('qrCodeScanner'),
     startQrCodeScannerBtn: document.getElementById('startQrCodeScannerBtn'),
@@ -37,7 +51,15 @@ const elements = {
     cancelQrCodeBtn: document.getElementById('cancelQrCodeBtn'),
     qrCodeFeedback: document.getElementById('qrCodeFeedback'),
     
-    // Outros
+    // Seal Modal
+    sealNumber: document.getElementById('sealNumber'),
+    sealScanner: document.getElementById('sealScanner'),
+    startSealScannerBtn: document.getElementById('startSealScannerBtn'),
+    confirmSealBtn: document.getElementById('confirmSealBtn'),
+    cancelSealBtn: document.getElementById('cancelSealBtn'),
+    sealFeedback: document.getElementById('sealFeedback'),
+    
+    // Others
     logoutBtn: document.getElementById('logoutBtn')
 };
 
@@ -51,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = user;
             elements.currentUser.textContent = user.displayName || user.email;
             setupEventListeners();
-            loadActiveProcesses();
+            checkActiveProcess();
         }
     });
 });
@@ -79,6 +101,17 @@ function setupEventListeners() {
     });
     elements.confirmQrCodeBtn.addEventListener('click', confirmCurrentStep);
     
+    // Modal Lacre
+    elements.startSealScannerBtn.addEventListener('click', () => startScanner('seal'));
+    elements.cancelSealBtn.addEventListener('click', () => {
+        elements.sealModal.style.display = 'none';
+        stopScanner();
+    });
+    elements.confirmSealBtn.addEventListener('click', confirmSeal);
+    
+    // Cancelar processo
+    elements.cancelProcessBtn.addEventListener('click', cancelCurrentProcess);
+    
     // Logout
     elements.logoutBtn.addEventListener('click', () => {
         firebase.auth().signOut().then(() => {
@@ -87,152 +120,247 @@ function setupEventListeners() {
     });
 }
 
-function loadActiveProcesses() {
-    db.ref('shipment_processes').on('value', snapshot => {
-        activeProcesses = {};
-        elements.processList.innerHTML = '';
-        
-        snapshot.forEach(processSnapshot => {
-            const process = processSnapshot.val();
-            activeProcesses[processSnapshot.key] = process;
-            renderProcess(processSnapshot.key, process);
-        });
-    });
-}
-
-function renderProcess(processId, process) {
-    const processElement = document.createElement('div');
-    processElement.className = 'process-card';
-    processElement.dataset.processId = processId;
-    
-    const stepsHtml = Object.entries(process.steps).map(([stepId, step]) => {
-        const statusClass = step.status === 'completed' ? 'completed' : 
-                          step.status === 'in_progress' ? 'in-progress' : 'pending';
-        
-        const startTime = process[`${stepId}_startTime`] || null;
-        const endTime = process[`${stepId}_endTime`] || null;
-        
-        let timeText = '';
-        if (startTime && !endTime) {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            timeText = `⏱️ ${formatTime(elapsed)}`;
-        } else if (startTime && endTime) {
-            const duration = Math.floor((endTime - startTime) / 1000);
-            timeText = `⏱️ ${formatTime(duration)}`;
-        }
-        
-        return `
-            <div class="step ${statusClass}">
-                <div class="step-header">
-                    <span class="step-title">${step.name}</span>
-                    <span class="step-status">${getStatusLabel(step.status)}</span>
-                </div>
-                ${timeText ? `<div class="step-time">${timeText}</div>` : ''}
-                ${step.status === 'in_progress' ? `
-                <button class="btn primary-btn action-step-btn" data-action="complete" data-step="${stepId}">
-                    Finalizar Etapa
-                </button>` : ''}
-                ${step.status === 'pending' && isNextStep(process, stepId) ? `
-                <button class="btn secondary-btn action-step-btn" data-action="start" data-step="${stepId}">
-                    Iniciar Etapa
-                </button>` : ''}
-            </div>
-        `;
-    }).join('');
-    
-    processElement.innerHTML = `
-        <div class="process-header">
-            <h3>${process.shipmentNumber} (${process.transportType === 'maritimo' ? 'Marítimo' : 'Rodoviário'})</h3>
-            <div class="process-status ${process.status}">${getStatusLabel(process.status)}</div>
-        </div>
-        <div class="process-steps">
-            ${stepsHtml}
-        </div>
-        ${process.status === 'in_progress' ? `
-        <div class="process-actions">
-            <button class="btn danger-btn cancel-process-btn">Cancelar Processo</button>
-        </div>` : ''}
-    `;
-    
-    // Adicionar event listeners para os botões de ação
-    processElement.querySelectorAll('.action-step-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const action = e.target.dataset.action;
-            const stepId = e.target.dataset.step;
-            handleStepAction(processId, stepId, action);
-        });
-    });
-    
-    // Adicionar event listener para cancelar processo
-    const cancelBtn = processElement.querySelector('.cancel-process-btn');
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-            if (confirm('Tem certeza que deseja cancelar este processo?')) {
-                cancelProcess(processId);
+function checkActiveProcess() {
+    db.ref('shipment_processes').orderByChild('createdBy').equalTo(currentUser.uid).once('value')
+        .then(snapshot => {
+            if (snapshot.exists()) {
+                snapshot.forEach(processSnapshot => {
+                    currentProcess = {
+                        id: processSnapshot.key,
+                        ...processSnapshot.val()
+                    };
+                    showCurrentProcess();
+                    return true; // Apenas o primeiro processo ativo
+                });
+            } else {
+                showMainScreen();
             }
         });
-    }
-    
-    elements.processList.appendChild(processElement);
 }
 
-function isNextStep(process, stepId) {
-    const stepsOrder = getStepsOrder(process.transportType);
-    const currentIndex = stepsOrder.indexOf(stepId);
-    
-    // Verificar se todas as etapas anteriores estão completas
-    for (let i = 0; i < currentIndex; i++) {
-        const prevStepId = stepsOrder[i];
-        if (process.steps[prevStepId].status !== 'completed') {
-            return false;
-        }
-    }
-    
-    // Verificar se esta etapa ainda está pendente
-    return process.steps[stepId].status === 'pending';
+function showMainScreen() {
+    elements.mainActionButtons.style.display = 'block';
+    elements.currentProcessContainer.style.display = 'none';
 }
 
-function getStepsOrder(transportType) {
-    const baseSteps = [
-        'truck_opening',
-        'loading',
-        'truck_closing',
-        'awaiting_seal'
-    ];
+function showCurrentProcess() {
+    elements.mainActionButtons.style.display = 'none';
+    elements.currentProcessContainer.style.display = 'block';
     
-    if (transportType === 'rodoviario') {
-        baseSteps.splice(2, 0, 'pre_belt');
-    }
+    // Atualizar informações do processo
+    elements.currentShipmentNumber.textContent = currentProcess.shipmentNumber;
+    elements.currentProcessStatus.textContent = getStatusLabel(currentProcess.status);
+    elements.currentProcessStatus.className = `process-status ${currentProcess.status}`;
     
-    return baseSteps;
+    // Iniciar temporizador total
+    startTotalTimer();
+    
+    // Mostrar etapa atual
+    updateCurrentStepDisplay();
 }
 
-function handleStepAction(processId, stepId, action) {
-    const processRef = db.ref(`shipment_processes/${processId}`);
+function updateCurrentStepDisplay() {
+    if (!currentProcess.currentStep) {
+        // Processo concluído ou sem etapa atual
+        elements.currentStepName.textContent = 'Processo concluído';
+        elements.currentStepActions.innerHTML = '';
+        return;
+    }
     
-    if (action === 'start') {
-        // Iniciar etapa
-        const updates = {
-            [`steps/${stepId}/status`]: 'in_progress',
-            [`${stepId}_startTime`]: firebase.database.ServerValue.TIMESTAMP,
-            currentStep: stepId
-        };
+    const step = currentProcess.steps[currentProcess.currentStep];
+    elements.currentStepName.textContent = step.name;
+    
+    // Limpar ações anteriores
+    elements.currentStepActions.innerHTML = '';
+    
+    // Configurar ações com base na etapa
+    switch (currentProcess.currentStep) {
+        case 'truck_opening':
+            setupTruckOpeningStep();
+            break;
+        case 'loading':
+            setupLoadingStep();
+            break;
+        case 'truck_closing':
+            setupTruckClosingStep();
+            break;
+        case 'awaiting_seal':
+            setupAwaitingSealStep();
+            break;
+        case 'pre_belt':
+            setupPreBeltStep();
+            break;
+    }
+}
+
+function setupTruckOpeningStep() {
+    // Verificar se já está em andamento
+    if (currentProcess.steps.truck_opening.status === 'in_progress') {
+        // Mostrar botão para finalizar abertura
+        const endBtn = document.createElement('button');
+        endBtn.className = 'btn primary-btn';
+        endBtn.innerHTML = '<i class="fas fa-stop"></i> Finalizar Abertura';
+        endBtn.addEventListener('click', () => showQrCodeModal('Finalizar Abertura do Caminhão', 'complete'));
+        elements.currentStepActions.appendChild(endBtn);
         
-        processRef.update(updates)
-            .then(() => {
-                showQrCodeModal(`Confirmar início: ${activeProcesses[processId].steps[stepId].name}`, processId, stepId, 'start');
-            });
-    } else if (action === 'complete') {
-        // Finalizar etapa
-        showQrCodeModal(`Confirmar conclusão: ${activeProcesses[processId].steps[stepId].name}`, processId, stepId, 'complete');
+        // Iniciar contador da etapa
+        startStepTimer(currentProcess.truck_opening_startTime);
+    } else {
+        // Mostrar botão para iniciar abertura
+        const startBtn = document.createElement('button');
+        startBtn.className = 'btn primary-btn';
+        startBtn.innerHTML = '<i class="fas fa-play"></i> Iniciar Abertura';
+        startBtn.addEventListener('click', () => showQrCodeModal('Iniciar Abertura do Caminhão', 'start'));
+        elements.currentStepActions.appendChild(startBtn);
     }
+}
+
+function setupLoadingStep() {
+    if (currentProcess.steps.loading.status === 'in_progress') {
+        // Mostrar botão para finalizar carregamento
+        const endBtn = document.createElement('button');
+        endBtn.className = 'btn primary-btn';
+        endBtn.innerHTML = '<i class="fas fa-stop"></i> Finalizar Carregamento';
+        endBtn.addEventListener('click', () => showQrCodeModal('Finalizar Carregamento', 'complete'));
+        elements.currentStepActions.appendChild(endBtn);
+        
+        // Iniciar contador da etapa
+        startStepTimer(currentProcess.loading_startTime);
+    } else {
+        // Mostrar botão para iniciar carregamento
+        const startBtn = document.createElement('button');
+        startBtn.className = 'btn primary-btn';
+        startBtn.innerHTML = '<i class="fas fa-play"></i> Iniciar Carregamento';
+        startBtn.addEventListener('click', () => showQrCodeModal('Iniciar Carregamento', 'start'));
+        elements.currentStepActions.appendChild(startBtn);
+    }
+}
+
+function setupTruckClosingStep() {
+    if (currentProcess.steps.truck_closing.status === 'in_progress') {
+        // Mostrar botão para finalizar fechamento
+        const endBtn = document.createElement('button');
+        endBtn.className = 'btn primary-btn';
+        endBtn.innerHTML = '<i class="fas fa-stop"></i> Finalizar Fechamento';
+        endBtn.addEventListener('click', () => showQrCodeModal('Finalizar Fechamento do Caminhão', 'complete'));
+        elements.currentStepActions.appendChild(endBtn);
+        
+        // Iniciar contador da etapa
+        startStepTimer(currentProcess.truck_closing_startTime);
+    } else {
+        // Mostrar botão para iniciar fechamento
+        const startBtn = document.createElement('button');
+        startBtn.className = 'btn primary-btn';
+        startBtn.innerHTML = '<i class="fas fa-play"></i> Iniciar Fechamento';
+        startBtn.addEventListener('click', () => showQrCodeModal('Iniciar Fechamento do Caminhão', 'start'));
+        elements.currentStepActions.appendChild(startBtn);
+    }
+}
+
+function setupAwaitingSealStep() {
+    if (currentProcess.steps.awaiting_seal.status === 'completed') {
+        elements.currentStepName.textContent = 'Processo concluído - Aguardando lacre';
+    } else {
+        // Mostrar botão para registrar lacre
+        const sealBtn = document.createElement('button');
+        sealBtn.className = 'btn primary-btn';
+        sealBtn.innerHTML = '<i class="fas fa-lock"></i> Registrar Lacre';
+        sealBtn.addEventListener('click', showSealModal);
+        elements.currentStepActions.appendChild(sealBtn);
+    }
+}
+
+function setupPreBeltStep() {
+    if (currentProcess.steps.pre_belt.status === 'in_progress') {
+        // Mostrar botão para finalizar pré-cinto
+        const endBtn = document.createElement('button');
+        endBtn.className = 'btn primary-btn';
+        endBtn.innerHTML = '<i class="fas fa-stop"></i> Finalizar Pré-Cinto';
+        endBtn.addEventListener('click', () => showQrCodeModal('Finalizar Pré-Cinto', 'complete'));
+        elements.currentStepActions.appendChild(endBtn);
+        
+        // Iniciar contador da etapa
+        startStepTimer(currentProcess.pre_belt_startTime);
+    } else {
+        // Mostrar botão para iniciar pré-cinto
+        const startBtn = document.createElement('button');
+        startBtn.className = 'btn primary-btn';
+        startBtn.innerHTML = '<i class="fas fa-play"></i> Iniciar Pré-Cinto';
+        startBtn.addEventListener('click', () => showQrCodeModal('Iniciar Pré-Cinto', 'start'));
+        elements.currentStepActions.appendChild(startBtn);
+    }
+}
+
+function startTotalTimer() {
+    if (totalTimeInterval) clearInterval(totalTimeInterval);
+    
+    const startTime = currentProcess.startTime || Date.now();
+    
+    const updateTimer = () => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        elements.totalTime.textContent = formatTime(elapsed);
+    };
+    
+    updateTimer();
+    totalTimeInterval = setInterval(updateTimer, 1000);
+}
+
+function startStepTimer(startTime) {
+    if (stepTimeInterval) clearInterval(stepTimeInterval);
+    
+    const updateTimer = () => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        elements.stepTime.textContent = formatTime(elapsed);
+    };
+    
+    updateTimer();
+    stepTimeInterval = setInterval(updateTimer, 1000);
+}
+
+function stopStepTimer() {
+    if (stepTimeInterval) {
+        clearInterval(stepTimeInterval);
+        stepTimeInterval = null;
+    }
+}
+
+function showQrCodeModal(title, action) {
+    elements.qrCodeModalTitle.textContent = title;
+    elements.qrCodeModal.dataset.action = action;
+    
+    // Resetar o modal
+    elements.qrCodeOperatorName.textContent = '';
+    elements.qrCodeOperatorInfo.style.display = 'none';
+    elements.confirmQrCodeBtn.disabled = true;
+    elements.qrCodeFeedback.style.display = 'none';
+    
+    elements.qrCodeModal.style.display = 'flex';
+}
+
+function showSealModal() {
+    // Resetar o modal
+    elements.sealNumber.value = '';
+    elements.sealFeedback.style.display = 'none';
+    
+    elements.sealModal.style.display = 'flex';
 }
 
 function startScanner(type) {
     stopScanner();
-    currentScannerType = type;
     
-    let scannerElement = type === 'startProcess' ? elements.startProcessScanner : elements.qrCodeScanner;
+    let scannerElement;
+    switch (type) {
+        case 'startProcess':
+            scannerElement = elements.startProcessScanner;
+            break;
+        case 'generic':
+            scannerElement = elements.qrCodeScanner;
+            break;
+        case 'seal':
+            scannerElement = elements.sealScanner;
+            break;
+    }
+    
     scannerElement.style.display = 'block';
     
     currentScanner = new Instascan.Scanner({
@@ -259,7 +387,8 @@ function startScanner(type) {
         .catch(error => {
             console.error('Erro ao iniciar scanner:', error);
             showFeedback('Erro ao acessar câmera: ' + error.message, 'error', 
-                       type === 'startProcess' ? 'startProcessFeedback' : 'qrCodeFeedback');
+                       type === 'startProcess' ? 'startProcessFeedback' : 
+                       type === 'seal' ? 'sealFeedback' : 'qrCodeFeedback');
         });
 }
 
@@ -270,18 +399,21 @@ function stopScanner() {
     }
     elements.startProcessScanner.style.display = 'none';
     elements.qrCodeScanner.style.display = 'none';
+    elements.sealScanner.style.display = 'none';
 }
 
 function handleQrScan(content, type) {
     const qrCodeRegex = /^GZL-EO-\d{5}$/;
     if (!qrCodeRegex.test(content)) {
         showFeedback('QR Code inválido! Formato deve ser GZL-EO-XXXXX', 'error', 
-                   type === 'startProcess' ? 'startProcessFeedback' : 'qrCodeFeedback');
+                   type === 'startProcess' ? 'startProcessFeedback' : 
+                   type === 'seal' ? 'sealFeedback' : 'qrCodeFeedback');
         return;
     }
 
     showFeedback('Validando QR Code...', 'info', 
-               type === 'startProcess' ? 'startProcessFeedback' : 'qrCodeFeedback');
+               type === 'startProcess' ? 'startProcessFeedback' : 
+               type === 'seal' ? 'sealFeedback' : 'qrCodeFeedback');
 
     db.ref('funcionarios').orderByChild('codigo').equalTo(content).once('value')
         .then(snapshot => {
@@ -301,6 +433,10 @@ function handleQrScan(content, type) {
                 elements.confirmStartProcessBtn.disabled = false;
                 showFeedback('Operador validado com sucesso!', 'success', 'startProcessFeedback');
                 stopScanner();
+            } else if (type === 'seal') {
+                elements.sealNumber.value = content;
+                showFeedback('QR Code lido com sucesso!', 'success', 'sealFeedback');
+                stopScanner();
             } else {
                 elements.qrCodeOperatorName.textContent = employeeData.nome;
                 elements.qrCodeOperatorInfo.style.display = 'block';
@@ -312,7 +448,8 @@ function handleQrScan(content, type) {
         .catch(error => {
             console.error('Erro ao validar QR Code:', error);
             showFeedback('Erro: ' + error.message, 'error', 
-                       type === 'startProcess' ? 'startProcessFeedback' : 'qrCodeFeedback');
+                       type === 'startProcess' ? 'startProcessFeedback' : 
+                       type === 'seal' ? 'sealFeedback' : 'qrCodeFeedback');
         });
 }
 
@@ -358,13 +495,22 @@ function startShipmentProcess() {
 
             // Salvar processo
             const processRef = db.ref('shipment_processes').push();
-            return processRef.set(newProcess);
+            return processRef.set(newProcess)
+                .then(() => {
+                    // Definir como processo atual
+                    currentProcess = {
+                        id: processRef.key,
+                        ...newProcess
+                    };
+                    return processRef.once('value');
+                });
         })
         .then(() => {
             showFeedback('Processo criado com sucesso!', 'success', 'startProcessFeedback');
             setTimeout(() => {
                 elements.startProcessModal.style.display = 'none';
                 resetStartProcessForm();
+                showCurrentProcess();
             }, 1500);
         })
         .catch(error => {
@@ -373,24 +519,7 @@ function startShipmentProcess() {
         });
 }
 
-function showQrCodeModal(title, processId, stepId, action) {
-    elements.qrCodeModalTitle.textContent = title;
-    elements.qrCodeModal.dataset.processId = processId;
-    elements.qrCodeModal.dataset.stepId = stepId;
-    elements.qrCodeModal.dataset.action = action;
-    
-    // Resetar o modal
-    elements.qrCodeOperatorName.textContent = '';
-    elements.qrCodeOperatorInfo.style.display = 'none';
-    elements.confirmQrCodeBtn.disabled = true;
-    elements.qrCodeFeedback.style.display = 'none';
-    
-    elements.qrCodeModal.style.display = 'flex';
-}
-
 function confirmCurrentStep() {
-    const processId = elements.qrCodeModal.dataset.processId;
-    const stepId = elements.qrCodeModal.dataset.stepId;
     const action = elements.qrCodeModal.dataset.action;
     const operatorName = elements.qrCodeOperatorName.textContent;
     
@@ -400,35 +529,31 @@ function confirmCurrentStep() {
     }
     
     elements.confirmQrCodeBtn.disabled = true;
-    const processRef = db.ref(`shipment_processes/${processId}`);
+    const processRef = db.ref(`shipment_processes/${currentProcess.id}`);
     
     const updates = {};
     const now = firebase.database.ServerValue.TIMESTAMP;
+    const currentStep = currentProcess.currentStep || getFirstStep();
     
     if (action === 'start') {
-        // Confirmar início do processo
+        // Iniciar etapa
+        updates[`steps/${currentStep}/status`] = 'in_progress';
+        updates[`${currentStep}_startTime`] = now;
+        updates.currentStep = currentStep;
         updates.status = 'in_progress';
-        updates.startTime = now;
-        updates.startConfirmedBy = operatorName;
-        updates.startConfirmedAt = now;
         
-        // Iniciar primeira etapa
-        const firstStepId = getStepsOrder(activeProcesses[processId].transportType)[0];
-        updates[`steps/${firstStepId}/status`] = 'in_progress';
-        updates[`${firstStepId}_startTime`] = now;
-        updates.currentStep = firstStepId;
-    } 
-    else if (action === 'complete') {
+        if (!currentProcess.startTime) {
+            updates.startTime = now;
+        }
+    } else if (action === 'complete') {
         // Finalizar etapa atual
-        updates[`steps/${stepId}/status`] = 'completed';
-        updates[`${stepId}_endTime`] = now;
-        updates[`${stepId}_endConfirmedBy`] = operatorName;
-        updates[`${stepId}_endConfirmedAt`] = now;
+        updates[`steps/${currentStep}/status`] = 'completed';
+        updates[`${currentStep}_endTime`] = now;
         updates.currentStep = null;
         
-        // Iniciar próxima etapa se houver
-        const stepsOrder = getStepsOrder(activeProcesses[processId].transportType);
-        const currentIndex = stepsOrder.indexOf(stepId);
+        // Determinar próxima etapa
+        const stepsOrder = getStepsOrder(currentProcess.transportType);
+        const currentIndex = stepsOrder.indexOf(currentStep);
         const nextStepId = stepsOrder[currentIndex + 1];
         
         if (nextStepId) {
@@ -447,12 +572,22 @@ function confirmCurrentStep() {
             showFeedback('Operação confirmada com sucesso!', 'success', 'qrCodeFeedback');
             setTimeout(() => {
                 elements.qrCodeModal.style.display = 'none';
+                
+                // Atualizar processo local e exibição
+                db.ref(`shipment_processes/${currentProcess.id}`).once('value')
+                    .then(snapshot => {
+                        currentProcess = {
+                            id: snapshot.key,
+                            ...snapshot.val()
+                        };
+                        updateCurrentStepDisplay();
+                        
+                        // Se foi a última etapa, salvar no histórico
+                        if (action === 'complete' && !updates.currentStep) {
+                            saveProcessToHistory();
+                        }
+                    });
             }, 1500);
-            
-            // Se foi a última etapa, salvar no histórico
-            if (action === 'complete' && !updates.currentStep) {
-                saveProcessToHistory(processId);
-            }
         })
         .catch(error => {
             console.error('Erro ao confirmar etapa:', error);
@@ -461,41 +596,94 @@ function confirmCurrentStep() {
         });
 }
 
-function saveProcessToHistory(processId) {
-    const process = activeProcesses[processId];
-    if (!process) return;
+function confirmSeal() {
+    const sealNumber = elements.sealNumber.value.trim();
+    
+    if (!sealNumber) {
+        showFeedback('Informe o número do lacre', 'error', 'sealFeedback');
+        return;
+    }
+    
+    const processRef = db.ref(`shipment_processes/${currentProcess.id}`);
+    const now = firebase.database.ServerValue.TIMESTAMP;
+    
+    const updates = {
+        'steps/awaiting_seal/status': 'completed',
+        sealNumber,
+        sealAppliedAt: now,
+        status: 'completed',
+        endTime: now
+    };
+    
+    processRef.update(updates)
+        .then(() => {
+            showFeedback('Lacre registrado com sucesso!', 'success', 'sealFeedback');
+            setTimeout(() => {
+                elements.sealModal.style.display = 'none';
+                
+                // Atualizar processo local e exibição
+                db.ref(`shipment_processes/${currentProcess.id}`).once('value')
+                    .then(snapshot => {
+                        currentProcess = {
+                            id: snapshot.key,
+                            ...snapshot.val()
+                        };
+                        updateCurrentStepDisplay();
+                        
+                        // Salvar no histórico
+                        saveProcessToHistory();
+                    });
+            }, 1500);
+        })
+        .catch(error => {
+            console.error('Erro ao registrar lacre:', error);
+            showFeedback('Erro: ' + error.message, 'error', 'sealFeedback');
+        });
+}
+
+function saveProcessToHistory() {
+    if (!currentProcess) return;
     
     const historyData = {
-        processId,
-        operatorName: process.operatorName,
-        shipmentNumber: process.shipmentNumber,
-        transportType: process.transportType,
-        startTime: process.startTime,
-        endTime: process.endTime || firebase.database.ServerValue.TIMESTAMP,
+        processId: currentProcess.id,
+        operatorName: currentProcess.operatorName,
+        shipmentNumber: currentProcess.shipmentNumber,
+        transportType: currentProcess.transportType,
+        startTime: currentProcess.startTime,
+        endTime: currentProcess.endTime || firebase.database.ServerValue.TIMESTAMP,
         steps: {},
-        totalDuration: (process.endTime || Date.now()) - process.startTime
+        totalDuration: (currentProcess.endTime || Date.now()) - currentProcess.startTime,
+        sealNumber: currentProcess.sealNumber || null,
+        sealAppliedAt: currentProcess.sealAppliedAt || null
     };
     
     // Calcular tempos para cada etapa
-    Object.keys(process.steps).forEach(stepId => {
+    Object.keys(currentProcess.steps).forEach(stepId => {
         historyData.steps[stepId] = {
-            name: process.steps[stepId].name,
-            startTime: process[`${stepId}_startTime`],
-            endTime: process[`${stepId}_endTime`],
-            duration: process[`${stepId}_endTime`] - process[`${stepId}_startTime`]
+            name: currentProcess.steps[stepId].name,
+            startTime: currentProcess[`${stepId}_startTime`],
+            endTime: currentProcess[`${stepId}_endTime`],
+            duration: currentProcess[`${stepId}_endTime`] - currentProcess[`${stepId}_startTime`]
         };
     });
     
     db.ref('shipment_history').push(historyData)
         .then(() => {
-            db.ref(`shipment_processes/${processId}`).remove();
+            db.ref(`shipment_processes/${currentProcess.id}`).remove()
+                .then(() => {
+                    currentProcess = null;
+                    showMainScreen();
+                });
         });
 }
 
-function cancelProcess(processId) {
-    db.ref(`shipment_processes/${processId}`).remove()
+function cancelCurrentProcess() {
+    if (!confirm('Tem certeza que deseja cancelar este processo?')) return;
+    
+    db.ref(`shipment_processes/${currentProcess.id}`).remove()
         .then(() => {
-            showFeedback('Processo cancelado com sucesso!', 'success', 'qrCodeFeedback');
+            currentProcess = null;
+            showMainScreen();
         })
         .catch(error => {
             console.error('Erro ao cancelar processo:', error);
@@ -512,6 +700,25 @@ function resetStartProcessForm() {
     elements.confirmStartProcessBtn.disabled = true;
     elements.startProcessFeedback.style.display = 'none';
     stopScanner();
+}
+
+function getFirstStep() {
+    return currentProcess.transportType === 'rodoviario' ? 'truck_opening' : 'truck_opening';
+}
+
+function getStepsOrder(transportType) {
+    const baseSteps = [
+        'truck_opening',
+        'loading',
+        'truck_closing',
+        'awaiting_seal'
+    ];
+    
+    if (transportType === 'rodoviario') {
+        baseSteps.splice(2, 0, 'pre_belt');
+    }
+    
+    return baseSteps;
 }
 
 function showFeedback(message, type, elementId) {

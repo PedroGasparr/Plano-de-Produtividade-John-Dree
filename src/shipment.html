@@ -84,6 +84,11 @@
             color: #333;
         }
         
+        .danger-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        
         .process-steps {
             margin-top: 20px;
         }
@@ -141,6 +146,34 @@
             display: flex;
             gap: 10px;
         }
+        
+        .timer-display {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .feedback {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .info {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
     </style>
 </head>
 <body>
@@ -149,7 +182,7 @@
         <nav class="sidebar">
             <div class="sidebar-header">
                 <img src="../img/GZL - Logos_pages-to-jpg-0001.jpg" alt="Logo PA" class="sidebar-logo">
-                <h2>Sistema PA</h2>
+                <h2>Sistema PA 10.0</h2>
             </div>
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html"><i class="fas fa-home"></i> Início</a></li>
@@ -172,16 +205,35 @@
                 </div>
             </header>
 
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-                <button class="btn primary-btn" id="startShipmentProcessBtn">
-                    <i class="fas fa-play"></i> Iniciar Processo
-                </button>
+            <!-- Current Process Display -->
+            <div id="currentProcessContainer" style="display: none;">
+                <div class="process-header">
+                    <h2 id="currentShipmentNumber"></h2>
+                    <div class="process-status" id="currentProcessStatus"></div>
+                </div>
+                
+                <div class="timer-display">
+                    Tempo total: <span id="totalTime">00:00:00</span>
+                </div>
+                
+                <div class="current-step">
+                    <h3 id="currentStepName"></h3>
+                    <div class="timer-display">
+                        Tempo da etapa: <span id="stepTime">00:00:00</span>
+                    </div>
+                    <div class="step-actions" id="currentStepActions"></div>
+                </div>
+                
+                <div class="process-actions">
+                    <button class="btn danger-btn" id="cancelProcessBtn">Cancelar Processo</button>
+                </div>
             </div>
 
-            <!-- Process Steps -->
-            <div class="process-steps" id="processSteps">
-                <!-- Etapas serão geradas dinamicamente aqui -->
+            <!-- Action Buttons -->
+            <div class="action-buttons" id="mainActionButtons">
+                <button class="btn primary-btn" id="startShipmentProcessBtn">
+                    <i class="fas fa-play"></i> Iniciar Novo Processo
+                </button>
             </div>
 
             <!-- Modal Iniciar Processo -->
@@ -190,7 +242,7 @@
                     <span class="close-modal">&times;</span>
                     <h2>Iniciar Processo de Shipment</h2>
 
-                    <div id="startProcessFeedback" style="display: none; margin: 10px 0; padding: 10px; border-radius: 4px;"></div>
+                    <div id="startProcessFeedback" class="feedback"></div>
 
                     <div class="qr-scanner-container">
                         <video id="startProcessScanner" width="100%" playsinline></video>
@@ -230,7 +282,7 @@
                     <span class="close-modal">&times;</span>
                     <h2 id="qrCodeModalTitle">Ler QR Code</h2>
 
-                    <div id="qrCodeFeedback" style="display: none; margin: 10px 0; padding: 10px; border-radius: 4px;"></div>
+                    <div id="qrCodeFeedback" class="feedback"></div>
 
                     <div class="qr-scanner-container">
                         <video id="qrCodeScanner" width="100%" playsinline></video>
@@ -246,6 +298,33 @@
                     <div class="modal-actions">
                         <button class="btn secondary-btn" id="cancelQrCodeBtn">Cancelar</button>
                         <button class="btn primary-btn" id="confirmQrCodeBtn" disabled>Confirmar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Lacre -->
+            <div class="modal" id="sealModal">
+                <div class="modal-content">
+                    <span class="close-modal">&times;</span>
+                    <h2>Registrar Lacre</h2>
+
+                    <div id="sealFeedback" class="feedback"></div>
+
+                    <div class="form-group">
+                        <label for="sealNumber">Número do Lacre:</label>
+                        <input type="text" id="sealNumber" placeholder="Digite o número do lacre" required>
+                    </div>
+
+                    <div class="qr-scanner-container">
+                        <video id="sealScanner" width="100%" playsinline></video>
+                        <button class="btn primary-btn" id="startSealScannerBtn">
+                            <i class="fas fa-qrcode"></i> Ler QR Code do Lacre
+                        </button>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn secondary-btn" id="cancelSealBtn">Cancelar</button>
+                        <button class="btn primary-btn" id="confirmSealBtn">Confirmar</button>
                     </div>
                 </div>
             </div>
