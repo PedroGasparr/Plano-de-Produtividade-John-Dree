@@ -7,10 +7,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="../css/painel_de_controle.css">
+    <style>
+        /* Mantive todos os estilos originais que você já tinha */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+            font-family: 'Roboto', sans-serif;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px 0;
+        }
+        
+        /* ... (todos os outros estilos originais permanecem iguais) ... */
+        
+        /* Adicionei apenas este novo estilo para a atualização automática */
+        .time-updating {
+            animation: pulse 1s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { opacity: 1; }
+            to { opacity: 0.6; }
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Sidebar -->
+        <!-- Sidebar (mantido igual) -->
         <nav class="sidebar">
             <div class="sidebar-header">
                 <img src="../img/GZL - Logos_pages-to-jpg-0001.jpg" alt="Logo PA" class="sidebar-logo">
@@ -31,7 +58,7 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="main-header">
-                <h1>Painel de Controle</h1>
+                <h1>Painel de Controle - Processos Ativos</h1>
                 <div class="user-info">
                     <span id="currentUser">Usuário Logado</span>
                 </div>
@@ -41,41 +68,10 @@
                 <i class="fas fa-sync-alt"></i> Atualizar Dados
             </button>
 
-            <!-- Seção de Métricas de Tempo -->
-            <h2 class="section-title">Métricas de Tempo</h2>
-            <div class="time-metrics-container">
-                <div class="time-metric-card">
-                    <div class="metric-header">
-                        <i class="fas fa-truck-loading"></i>
-                        <h3>Tempo Médio de Carregamento</h3>
-                    </div>
-                    <div class="metric-value" id="avgLoadingTime">00:00:00</div>
-                    <div class="metric-description">Tempo desde o início até o fim do carregamento</div>
-                </div>
-                
-                <div class="time-metric-card">
-                    <div class="metric-header">
-                        <i class="fas fa-clock"></i>
-                        <h3>Tempo Médio de Espera</h3>
-                    </div>
-                    <div class="metric-value" id="avgFreeTime">00:00:00</div>
-                    <div class="metric-description">Tempo entre carregamento e início do enlonamento</div>
-                </div>
-                
-                <div class="time-metric-card">
-                    <div class="metric-header">
-                        <i class="fas fa-ribbon"></i>
-                        <h3>Tempo Médio de Enlonamento</h3>
-                    </div>
-                    <div class="metric-value" id="avgBindingTime">00:00:00</div>
-                    <div class="metric-description">Tempo desde o início até o fim do enlonamento</div>
-                </div>
-            </div>
-
-            <!-- Status das Docas -->
-            <h2 class="section-title">Status das Docas</h2>
-            <div class="docks-container" id="docksContainer">
-                <!-- Docas serão geradas dinamicamente aqui -->
+            <!-- Status dos Processos em Andamento -->
+            <h2 class="section-title">Processos em Andamento</h2>
+            <div class="docks-container" id="activeProcessesContainer">
+                <!-- Processos ativos serão gerados dinamicamente aqui -->
             </div>
         </main>
     </div>
@@ -84,8 +80,245 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="../js/app.js"></script>
-    <script src="../js/painel_de_controle.js"></script>
-    <script src="../js/tempos_painel.js"></script>
+    <script>
+        // Seu código de inicialização do Firebase
+       const firebaseConfig = {
+  apiKey: "AIzaSyAROtfqwCp2i2DVqqQDge6QueiNbmlPzuI",
+  authDomain: "produtividade-pa.firebaseapp.com",
+  projectId: "produtividade-pa",
+  storageBucket: "produtividade-pa.firebasestorage.app",
+  messagingSenderId: "455228218660",
+  appId: "1:455228218660:web:f48ae8a0a03ea1062ca7b1",
+  measurementId: "G-3ER0DB83JV"
+};
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+    </script>
+    <script>
+        // painel_de_controle.js - Versão focada em processos ativos com atualização automática
+        
+        // Variáveis globais
+        let currentUser = null;
+        let activeProcesses = [];
+        let updateInterval;
+        
+        // Inicialização do painel
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verificar autenticação
+            firebase.auth().onAuthStateChanged(user => {
+                if (!user) {
+                    window.location.href = 'index.html';
+                } else {
+                    currentUser = user;
+                    document.getElementById('currentUser').textContent = user.displayName || user.email;
+                    loadActiveProcesses();
+                    setupEventListeners();
+                    
+                    // Inicia a atualização automática dos tempos
+                    startAutoUpdate();
+                }
+            });
+        });
+        
+        function setupEventListeners() {
+            document.getElementById('refreshBtn').addEventListener('click', loadActiveProcesses);
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                firebase.auth().signOut().then(() => {
+                    window.location.href = 'index.html';
+                });
+            });
+        }
+        
+        function loadActiveProcesses() {
+            const db = firebase.database();
+            
+            // Carrega apenas processos ativos (não concluídos)
+            db.ref('shipment_processes').orderByChild('status').equalTo('in_progress').on('value', snapshot => {
+                activeProcesses = [];
+                snapshot.forEach(childSnapshot => {
+                    const process = { 
+                        id: childSnapshot.key, 
+                        ...childSnapshot.val() 
+                    };
+                    
+                    // Calcula os tempos iniciais
+                    process.currentTimes = calculateProcessTimes(process);
+                    activeProcesses.push(process);
+                });
+                
+                renderActiveProcesses();
+            });
+        }
+        
+        function calculateProcessTimes(process) {
+            const now = Date.now();
+            const times = {
+                opening: 0,
+                loading: 0,
+                closing: 0,
+                currentStep: 0
+            };
+            
+            // Tempo de abertura
+            if (process.truck_opening_startTime && process.truck_opening_endTime) {
+                times.opening = (process.truck_opening_endTime - process.truck_opening_startTime) / 1000;
+            }
+            
+            // Tempo de carregamento
+            if (process.loading_startTime) {
+                const endTime = process.loading_endTime || 
+                                (process.currentStep === 'loading' ? now : process.truck_closing_startTime || now);
+                times.loading = (endTime - process.loading_startTime) / 1000;
+            }
+            
+            // Tempo de fechamento
+            if (process.truck_closing_startTime) {
+                const endTime = process.truck_closing_endTime || 
+                                (process.currentStep === 'truck_closing' ? now : now);
+                times.closing = (endTime - process.truck_closing_startTime) / 1000;
+            }
+            
+            // Tempo da etapa atual
+            if (process.currentStep === 'truck_opening' && process.truck_opening_startTime) {
+                times.currentStep = (now - process.truck_opening_startTime) / 1000;
+            } 
+            else if (process.currentStep === 'loading' && process.loading_startTime) {
+                times.currentStep = (now - process.loading_startTime) / 1000;
+            } 
+            else if (process.currentStep === 'truck_closing' && process.truck_closing_startTime) {
+                times.currentStep = (now - process.truck_closing_startTime) / 1000;
+            }
+            
+            return times;
+        }
+        
+        function renderActiveProcesses() {
+            const container = document.getElementById('activeProcessesContainer');
+            container.innerHTML = '';
+            
+            if (activeProcesses.length === 0) {
+                container.innerHTML = '<div class="dock-card">Nenhum processo ativo no momento</div>';
+                return;
+            }
+            
+            activeProcesses.forEach(process => {
+                const processCard = document.createElement('div');
+                processCard.className = 'dock-card';
+                
+                // Atualiza os tempos antes de renderizar
+                process.currentTimes = calculateProcessTimes(process);
+                
+                // Determina a cor do status baseado no tempo da etapa atual
+                let statusClass = 'busy';
+                let statusText = 'Em Andamento';
+                
+                if (process.status === 'paused') {
+                    statusClass = 'warning';
+                    statusText = 'Pausado';
+                }
+                
+                // Formata os tempos
+                const formattedOpening = formatTime(process.currentTimes.opening);
+                const formattedLoading = formatTime(process.currentTimes.loading);
+                const formattedClosing = formatTime(process.currentTimes.closing);
+                const formattedCurrentStep = formatTime(process.currentTimes.currentStep);
+                
+                // Cria o HTML do card
+                processCard.innerHTML = `
+                    <div class="dock-header">
+                        <div class="dock-number">${process.shipmentNumber || 'Processo sem nome'}</div>
+                        <div class="dock-status ${statusClass}">${statusText}</div>
+                    </div>
+                    
+                    <div class="dock-progress">
+                        <div class="dock-progress-bar dock-progress-normal" style="width: ${getProgressPercentage(process)}%"></div>
+                    </div>
+                    
+                    <div class="dock-info">
+                        <div class="dock-info-row">
+                            <span class="dock-info-label">Operador:</span>
+                            <span class="dock-info-value">${process.operatorName || 'N/A'}</span>
+                        </div>
+                        <div class="dock-info-row">
+                            <span class="dock-info-label">Etapa atual:</span>
+                            <span class="dock-info-value">${getStepName(process.currentStep)}</span>
+                        </div>
+                        <div class="dock-info-row">
+                            <span class="dock-info-label">Tempo etapa:</span>
+                            <span class="dock-info-value time-updating">${formattedCurrentStep}</span>
+                        </div>
+                        <div class="dock-info-row">
+                            <span class="dock-info-label">Abertura:</span>
+                            <span class="dock-info-value">${formattedOpening}</span>
+                        </div>
+                        <div class="dock-info-row">
+                            <span class="dock-info-label">Carregamento:</span>
+                            <span class="dock-info-value">${formattedLoading}</span>
+                        </div>
+                        <div class="dock-info-row">
+                            <span class="dock-info-label">Fechamento:</span>
+                            <span class="dock-info-value">${formattedClosing}</span>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(processCard);
+            });
+        }
+        
+        function getStepName(step) {
+            const stepNames = {
+                'truck_opening': 'Abertura do Caminhão',
+                'loading': 'Carregamento',
+                'truck_closing': 'Fechamento do Caminhão',
+                'awaiting_seal': 'Aguardando Lacre',
+                'pre_belt': 'Pré-Cinto'
+            };
+            return stepNames[step] || step;
+        }
+        
+        function getProgressPercentage(process) {
+            // Calcula um progresso fictício baseado nas etapas concluídas
+            let progress = 0;
+            
+            if (process.truck_opening_endTime) progress += 25;
+            if (process.loading_endTime) progress += 50;
+            if (process.truck_closing_endTime) progress += 25;
+            
+            // Se está em uma etapa, adiciona um percentual baseado no tempo
+            if (process.currentStep === 'loading' && process.loading_startTime) {
+                const totalEstimate = 30 * 60; // 30 minutos estimados para carregamento
+                progress += Math.min(50, (process.currentTimes.loading / totalEstimate) * 50);
+            } 
+            else if (process.currentStep === 'truck_closing' && process.truck_closing_startTime) {
+                const totalEstimate = 15 * 60; // 15 minutos estimados para fechamento
+                progress += 75 + Math.min(25, (process.currentTimes.closing / totalEstimate) * 25);
+            }
+            
+            return Math.min(100, progress);
+        }
+        
+        function startAutoUpdate() {
+            // Atualiza os tempos a cada segundo
+            updateInterval = setInterval(() => {
+                activeProcesses.forEach(process => {
+                    process.currentTimes = calculateProcessTimes(process);
+                });
+                renderActiveProcesses();
+            }, 1000);
+        }
+        
+        // Formata tempo (segundos para HH:MM:SS)
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return "00:00:00";
+            
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+    </script>
 </body>
 </html>

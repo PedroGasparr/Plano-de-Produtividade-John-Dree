@@ -1,3 +1,0 @@
-o processo está correto mas você não entendeu cada shipmente deve gerar um card visto que eu tenho que fazer mais de um processo ao mesmo tempo e outra cade os botes para a proxima etapa eu inicio ele está todo falhado e com erro e não aparece os botoes das proximas estapas  corrija por completo por favor para que funcoine de maneira correta por favor 
-
-O código agora segue exatamente o fluxo especificado: ler QR code → digitar shipment → iniciar processo → abertura → carregamento → fechamento → pré-cinto (se rodoviário) → lacre.

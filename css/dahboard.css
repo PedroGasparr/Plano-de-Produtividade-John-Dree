@@ -1,6 +1,6 @@
 :root {
-    --primary-color: #4285f4;
-    --primary-dark: #3367d6;
+    --primary-color: #367C2B;
+    --primary-dark: #FFE512;
     --secondary-color: #f1f3f4;
     --error-color: #d93025;
     --success-color: #188038;
@@ -81,7 +81,7 @@ body {
 
 .sidebar-menu li.active {
     background-color: rgba(255, 255, 255, 0.1);
-    border-left: 3px solid var(--sidebar-active);
+    border-left: 3px solid var(--primary-color);
 }
 
 .sidebar-menu a {
@@ -147,7 +147,7 @@ body {
 
 .primary-btn {
     background-color: var(--primary-color);
-    color: white;
+    color: rgb(255, 255, 255);
 }
 
 .primary-btn:hover {
@@ -161,7 +161,7 @@ body {
 }
 
 .secondary-btn:hover {
-    background-color: var(--secondary-color);
+    background-color: var(--primary-color);
 }
 
 .action-buttons {

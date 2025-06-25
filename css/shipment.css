@@ -1,6 +1,6 @@
 :root {
-    --primary-color: #4285f4;
-    --primary-dark: #3367d6;
+    --primary-color: #367C2B;
+    --primary-dark: #FFE512;
     --secondary-color: #f1f3f4;
     --error-color: #d93025;
     --success-color: #188038;
@@ -10,7 +10,7 @@
     --border-color: #dadce0;
     --bg-color: #f8f9fa;
     --sidebar-bg: #2c3e50;
-    --sidebar-active: #3498db;
+    --sidebar-active: #367C2B;
 }
 
 * {

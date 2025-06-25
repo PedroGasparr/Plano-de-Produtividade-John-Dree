@@ -1,12 +1,13 @@
 :root {
-    --primary-color: #2c3e50;
+     --primary-color: #367C2B;
+    --primary-dark: #FFE512;
     --secondary-color: #3498db;
     --success-color: #27ae60;
     --warning-color: #f39c12;
     --danger-color: #e74c3c;
     --light-color: #ecf0f1;
     --dark-color: #2c3e50;
-    --sidebar-active: #3498db;
+    --sidebar-active: #367C2B;
     --sidebar-hover: rgba(0, 0, 0, 0.1);
     --text-color: #333;
     --border-color: #ddd;
@@ -102,7 +103,7 @@ body {
 
 .sidebar-menu li.active {
     background-color: var(--sidebar-hover);
-    border-left: 4px solid var(--secondary-color);
+    border-left: 4px solid var(--primary-color);
 }
 
 .sidebar-menu a {
