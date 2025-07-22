@@ -7,79 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="../css/dahboard.css">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-        }
-        
-        .dashboard-container {
-            display: flex;
-            min-height: 100vh;
-        }
-        
-        .main-content {
-            flex: 1;
-            padding: 20px;
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        
-        .modal-content {
-            background-color: white;
-            padding: 20px;
-            border-radius: 5px;
-            width: 90%;
-            max-width: 500px;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .btn {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        
-        .secondary-btn {
-            background-color: #f1f1f1;
-            color: #333;
-        }
-    </style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -116,7 +43,7 @@
                     <i class="fas fa-play"></i> Iniciar Simulação
                 </button>
                 <button class="btn primary-btn" id="startShipmentBtn">
-                    <i class="fas fa-shipping-fast"></i> Iniciar Shipment
+                    <i class="fas fa-shipping-fast"></i> Locate Load
                 </button>
             </div>
 
@@ -132,9 +59,9 @@
             <div class="modal" id="simulationModal">
                 <div class="modal-content">
                     <span class="close-modal">&times;</span>
-                    <h2 id="simulationModalTitle">Iniciar Simulação</h2>
+                    <h2>Iniciar Simulação</h2>
 
-                    <div id="simulationFeedback" style="display: none; margin: 10px 0; padding: 10px; border-radius: 4px;"></div>
+                    <div id="simulationFeedback" class="feedback"></div>
 
                     <div class="qr-scanner-container">
                         <video id="simulationScanner" width="100%" playsinline></video>
@@ -148,8 +75,28 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="simulationAddress">Simulação:</label>
-                        <input type="text" id="simulationAddress" placeholder="" required>
+                        <label for="simulationAddress">Nº Surf:</label>
+                        <input type="text" id="simulationAddress" placeholder="Digite o número Surf" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="simulationCountry">Destino:</label>
+                        <div class="destination-container">
+                            <select id="simulationCountry" required>
+                                <option value="">Selecione o país</option>
+                                <option value="BRASIL">BRASIL</option>
+                                <option value="USA">USA</option>
+                                <option value="ARGENTINA">ARGENTINA</option>
+                                <option value="ALEMANHA">ALEMANHA</option>
+                                <option value="OUTRO">OUTRO</option>
+                            </select>
+                            <select id="simulationState" required>
+                                <option value="">Selecione o Tipo</option>
+                                <option value="Maritimo">Maritimo</option>
+                                <option value="Rodoviario">Rodoviario</option>
+                                <option value="Aereo">Aereo</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="modal-actions">
@@ -165,7 +112,7 @@
                     <span class="close-modal">&times;</span>
                     <h2>Finalizar Simulação</h2>
 
-                    <div id="finishSimulationFeedback" style="display: none; margin: 10px 0; padding: 10px; border-radius: 4px;"></div>
+                    <div id="finishSimulationFeedback" class="feedback"></div>
 
                     <div class="qr-scanner-container">
                         <video id="finishSimulationScanner" width="100%" playsinline></video>
@@ -176,6 +123,18 @@
 
                     <div id="finishSimulationOperatorInfo" style="display: none; margin: 10px 0;">
                         Operador: <strong id="finishSimulationOperatorName"></strong>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo de Conclusão:</label>
+                        <div class="completion-type">
+                            <label>
+                                <input type="radio" name="simulationCompletionType" value="complete" checked> Completa
+                            </label>
+                            <label>
+                                <input type="radio" name="simulationCompletionType" value="partial"> Parcial
+                            </label>
+                        </div>
                     </div>
 
                     <div class="modal-actions">
@@ -189,9 +148,9 @@
             <div class="modal" id="shipmentModal">
                 <div class="modal-content">
                     <span class="close-modal">&times;</span>
-                    <h2 id="shipmentModalTitle">Iniciar Shipment</h2>
+                    <h2>Locate Load</h2>
 
-                    <div id="shipmentFeedback" style="display: none; margin: 10px 0; padding: 10px; border-radius: 4px;"></div>
+                    <div id="shipmentFeedback" class="feedback"></div>
 
                     <div class="qr-scanner-container">
                         <video id="shipmentScanner" width="100%" playsinline></video>
@@ -205,18 +164,33 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="shipmentNumber">Número do Shipment:</label>
-                        <input type="text" id="shipmentNumber" placeholder="Digite o número do shipment" required>
-                    </div>
-
-                    <div class="form-group">
                         <label for="surfNumber">Número do SURF:</label>
                         <input type="text" id="surfNumber" placeholder="Digite o número do SURF" required>
                     </div>
 
+                    <div class="form-group">
+                        <label for="shipmentCountry">Destino:</label>
+                        <div class="destination-container">
+                            <select id="shipmentCountry" required>
+                                <option value="">Selecione o país</option>
+                                <option value="BRASIL">BRASIL</option>
+                                <option value="USA">USA</option>
+                                <option value="ARGENTINA">ARGENTINA</option>
+                                <option value="ALEMANHA">ALEMANHA</option>
+                                <option value="OUTRO">OUTRO</option>
+                            </select>
+                            <select id="shipmentState" required>
+                                <option value="">Selecione o Tipo</option>
+                                <option value="Maritimo">Maritimo</option>
+                                <option value="Rodoviario">Rodoviario</option>
+                                <option value="Aereo">Aereo</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="modal-actions">
                         <button class="btn secondary-btn" id="cancelShipmentBtn">Cancelar</button>
-                        <button class="btn primary-btn" id="confirmShipmentBtn" disabled>Iniciar Shipment</button>
+                        <button class="btn primary-btn" id="confirmShipmentBtn" disabled>Iniciar Locate Load</button>
                     </div>
                 </div>
             </div>
@@ -225,9 +199,9 @@
             <div class="modal" id="finishShipmentModal">
                 <div class="modal-content">
                     <span class="close-modal">&times;</span>
-                    <h2>Finalizar Shipment</h2>
+                    <h2>Finalizar Locate Load</h2>
 
-                    <div id="finishShipmentFeedback" style="display: none; margin: 10px 0; padding: 10px; border-radius: 4px;"></div>
+                    <div id="finishShipmentFeedback" class="feedback"></div>
 
                     <div class="qr-scanner-container">
                         <video id="finishShipmentScanner" width="100%" playsinline></video>
@@ -242,7 +216,7 @@
 
                     <div class="modal-actions">
                         <button class="btn secondary-btn" id="cancelFinishShipmentBtn">Cancelar</button>
-                        <button class="btn primary-btn" id="confirmFinishShipmentBtn" disabled>Finalizar Shipment</button>
+                        <button class="btn primary-btn" id="confirmFinishShipmentBtn" disabled>Finalizar Locate Load</button>
                     </div>
                 </div>
             </div>
