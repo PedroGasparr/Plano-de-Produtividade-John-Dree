@@ -1,0 +1,149 @@
+/* ===== MODAIS (VERSÃO COMPLETA CORRIGIDA) ===== */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  align-items: flex-start; /* Alterado para flex-start para mobile */
+  padding: var(--space-md); /* Adicionado padding para mobile */
+  z-index: 1000;
+  overflow-y: auto; /* Permite scroll no modal */
+}
+
+.modal.show {
+  display: flex;
+}
+
+/* Fundo do modal */
+.modal::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.modal.show::before {
+  opacity: 1;
+}
+
+/* Conteúdo do modal */
+.modal-content {
+  background-color: var(--white);
+  padding: var(--space-lg);
+  border-radius: var(--border-radius-md);
+  width: 100%; /* Alterado para 100% no mobile */
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-20px);
+  transition: transform var(--transition-normal);
+  position: relative;
+  z-index: 1001;
+  margin-top: var(--space-xl); /* Espaço no topo para mobile */
+  margin-bottom: var(--space-xl); /* Espaço na base para mobile */
+}
+
+.modal.show .modal-content {
+  transform: translateY(0);
+}
+
+/* Botão fechar */
+.close-modal {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  color: var(--dark-gray);
+  transition: color var(--transition-fast);
+  z-index: 1002;
+  background: rgba(255, 255, 255, 0.8); /* Fundo para melhor visibilidade */
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-modal:hover {
+  color: var(--black);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Título do modal */
+.modal h2 {
+  margin-bottom: var(--space-lg);
+  color: var(--primary-color);
+  font-size: var(--font-size-lg);
+  padding-right: var(--space-xl); /* Espaço para o botão fechar */
+}
+
+/* ===== AJUSTES ESPECÍFICOS PARA MOBILE ===== */
+@media (max-width: 768px) {
+  .modal {
+    align-items: flex-start; /* Alinha no topo em mobile */
+    padding: var(--space-sm);
+  }
+  
+  .modal-content {
+    width: 100%;
+    padding: var(--space-md);
+    max-height: 85vh;
+    margin-top: var(--space-lg);
+  }
+  
+  .close-modal {
+    top: var(--space-sm);
+    right: var(--space-sm);
+  }
+  
+  .modal h2 {
+    font-size: var(--font-size-md);
+    margin-bottom: var(--space-md);
+  }
+  
+  /* Ajustes para formulários dentro do modal */
+  .form-group input,
+  .form-group select {
+    padding: var(--space-sm);
+  }
+  
+  .modal-actions {
+    flex-direction: column-reverse; /* Botões em coluna */
+    gap: var(--space-sm);
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+  }
+  
+  /* Ajuste para o scanner QR */
+  .qr-scanner-container video {
+    max-height: 200px;
+  }
+}
+
+@media (max-width: 576px) {
+  .modal-content {
+    padding: var(--space-md) var(--space-sm);
+  }
+  
+  .destination-container {
+    flex-direction: column;
+  }
+  
+  .completion-type {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+}
