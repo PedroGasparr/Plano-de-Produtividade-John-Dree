@@ -3,108 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Produtividade PA</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
+    <title>Login e Cadastro</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div class="auth-container">
-        <div class="auth-card" id="loginCard">
-            <img src="img/GZL - Logos_pages-to-jpg-0001.jpg" alt="Logo" class="logo">
-            <h1>Bem-vindo ao Sistema PA</h1>
-            <p class="subtitle">Faça login para acessar seu painel</p>
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" data-tab="login">Login</div>
+            <div class="tab" data-tab="register">Criar Conta</div>
+        </div>
+        
+        <div class="form-container">
+            <div class="logo">
+                <h2>Prod<span>Plan</span></h2>
+            </div>
             
-            <form id="loginForm">
+            <!-- Mensagens de status -->
+            <div id="message" class="message"></div>
+            
+            <!-- Formulário de Login -->
+            <form id="login-form" class="form active">
                 <div class="input-group">
-                    <label for="loginEmail">E-mail</label>
-                    <input type="email" id="loginEmail" required placeholder="seu@email.com">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="Seu email" required>
                 </div>
                 
                 <div class="input-group">
-                    <label for="loginPassword">Senha</label>
+                    <label for="login-password">Senha</label>
                     <div class="password-container">
-                        <input type="password" id="loginPassword" required placeholder="••••••••">
-                        <i class="fas fa-eye toggle-password" data-target="loginPassword"></i>
+                        <input type="password" id="login-password" placeholder="Sua senha" required>
+                        <span class="toggle-password" onclick="togglePassword('login-password')">👁️</span>
                     </div>
                 </div>
                 
-                <button type="submit" class="btn primary-btn">Entrar</button>
-                <button type="button" class="btn google-btn" id="googleLogin">
-                    <i class="fab fa-google"></i> Entrar com Google
-                </button>
-                
-                <div class="auth-links">
-                    <a href="#" id="showForgotPassword">Esqueci minha senha</a>
-                    <a href="#" id="showRegister">Criar uma conta</a>
-                </div>
+                <button type="submit">Entrar</button>
             </form>
-        </div>
-
-        <div class="auth-card hidden" id="registerCard">
-            <img src="img/GZL - Logos_pages-to-jpg-0001.jpg" alt="Logo" class="logo">
-            <h1>Criar nova conta</h1>
-            <p class="subtitle">Preencha os dados para se registrar</p>
             
-            <form id="registerForm">
+            <!-- Formulário de Cadastro -->
+            <form id="register-form" class="form">
                 <div class="input-group">
-                    <label for="registerName">Nome completo</label>
-                    <input type="text" id="registerName" required placeholder="Seu nome">
+                    <label for="register-name">Nome Completo</label>
+                    <input type="text" id="register-name" placeholder="Seu nome completo" required>
                 </div>
                 
                 <div class="input-group">
-                    <label for="registerEmail">E-mail</label>
-                    <input type="email" id="registerEmail" required placeholder="seu@email.com">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" placeholder="Seu email" required>
                 </div>
                 
                 <div class="input-group">
-                    <label for="registerPassword">Senha</label>
+                    <label for="register-password">Senha</label>
                     <div class="password-container">
-                        <input type="password" id="registerPassword" required placeholder="••••••••" minlength="6">
-                        <i class="fas fa-eye toggle-password" data-target="registerPassword"></i>
-                    </div>
-                    <small class="hint">Mínimo de 6 caracteres</small>
-                </div>
-                
-                <div class="input-group">
-                    <label for="registerConfirmPassword">Confirmar senha</label>
-                    <div class="password-container">
-                        <input type="password" id="registerConfirmPassword" required placeholder="••••••••">
-                        <i class="fas fa-eye toggle-password" data-target="registerConfirmPassword"></i>
+                        <input type="password" id="register-password" placeholder="Crie uma senha" required>
+                        <span class="toggle-password" onclick="togglePassword('register-password')">👁️</span>
                     </div>
                 </div>
                 
-                <button type="submit" class="btn primary-btn">Registrar</button>
-                <div class="auth-links">
-                    <a href="#" id="showLogin">Já tenho uma conta</a>
-                </div>
-            </form>
-        </div>
-
-        <div class="auth-card hidden" id="forgotPasswordCard">
-            <img src="img/GZL - Logos_pages-to-jpg-0001.jpg" alt="Logo" class="logo">
-            <h1>Recuperar senha</h1>
-            <p class="subtitle">Informe seu e-mail para redefinir a senha</p>
-            
-            <form id="forgotPasswordForm">
                 <div class="input-group">
-                    <label for="forgotEmail">E-mail</label>
-                    <input type="email" id="forgotEmail" required placeholder="seu@email.com">
+                    <label for="register-unit">Unidade</label>
+                    <select id="register-unit" required>
+                        <option value="">Selecione uma unidade</option>
+                        <option value="Unidade Jonh Deere">Unidade Jonh Deere</option>
+                        <option value="Unidade Teste">Unidade Teste</option>
+                    </select>
                 </div>
                 
-                <button type="submit" class="btn primary-btn">Enviar link de recuperação</button>
-                <div class="auth-links">
-                    <a href="#" id="showLoginFromForgot">Voltar para login</a>
-                </div>
+                <button type="submit">Criar Conta</button>
             </form>
         </div>
-
-        <div id="authMessage" class="message hidden"></div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Firebase App (o core do Firebase) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <!-- Firebase Authentication -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Configuração do Firebase - substitua com suas credenciais
+        const firebaseConfig = {
+        apiKey: "AIzaSyCMu17OV-5ST1rlg00zbpt6Hv37GKqkX4A",
+        authDomain: "projetos-d868d.firebaseapp.com",
+        databaseURL: "https://projetos-d868d-default-rtdb.firebaseio.com",
+        projectId: "projetos-d868d",
+        storageBucket: "projetos-d868d.firebasestorage.app",
+        messagingSenderId: "420029352781",
+        appId: "1:420029352781:web:05176699348e0ccdd78504",
+        measurementId: "G-FXWXRX04WF"
+        };
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // Inicializar Firestore
+        const db = firebase.firestore();
+        
+        // Referências para os elementos do DOM
+        const tabs = document.querySelectorAll('.tab');
+        const forms = document.querySelectorAll('.form');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const messageDiv = document.getElementById('message');
+        
+        // Alternar entre as abas
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                
+                // Ativar a aba clicada e desativar as outras
+                tabs.forEach(t => t.classList.remove('active'));
+                forms.forEach(f => f.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`${tabName}-form`).classList.add('active');
+                
+                // Limpar mensagens
+                hideMessage();
+            });
+        });
+        
+        // Função para mostrar/ocultar senha
+        function togglePassword(inputId) {
+            const passwordInput = document.getElementById(inputId);
+            const toggleButton = passwordInput.nextElementSibling;
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleButton.textContent = '🔒';
+            } else {
+                passwordInput.type = 'password';
+                toggleButton.textContent = '👁️';
+            }
+        }
+        
+        // Funções para mostrar mensagens
+        function showMessage(message, type) {
+            messageDiv.textContent = message;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+        }
+        
+        function hideMessage() {
+            messageDiv.style.display = 'none';
+        }
+        
+        // Login com email e senha
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            // Validação básica
+            if (!email || !password) {
+                showMessage('Por favor, preencha todos os campos.', 'error');
+                return;
+            }
+            
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Login bem-sucedido
+                    showMessage('Login realizado com sucesso! Redirecionando...', 'success');
+                    
+                    // Limpar formulário
+                    loginForm.reset();
+                    
+                    // Simular redirecionamento
+                    setTimeout(() => {
+                        console.log('Usuário logado:', userCredential.user);
+                        window.location.href = 'src/operacao.html';
+                    }, 1500);
+                })
+                .catch((error) => {
+                    // Tratar erros
+                    let errorMessage = 'Erro ao fazer login.';
+                    
+                    switch (error.code) {
+                        case 'auth/user-not-found':
+                            errorMessage = 'Usuário não encontrado.';
+                            break;
+                        case 'auth/wrong-password':
+                            errorMessage = 'Senha incorreta.';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage = 'Email inválido.';
+                            break;
+                        default:
+                            errorMessage = error.message;
+                    }
+                    
+                    showMessage(errorMessage, 'error');
+                });
+        });
+        
+        
+        // Cadastro de nova conta
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const unit = document.getElementById('register-unit').value;
+            
+            // Validação
+            if (!name || !email || !password || !unit) {
+                showMessage('Por favor, preencha todos os campos.', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showMessage('A senha deve ter pelo menos 6 caracteres.', 'error');
+                return;
+            }
+            
+            // Criar usuário no Authentication
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Usuário criado com sucesso
+                    const user = userCredential.user;
+                    
+                    // Salvar informações adicionais no Firestore
+                    saveUserData(user, name, 'email', unit);
+                    
+                    // Limpar formulário
+                    registerForm.reset();
+                })
+                .catch((error) => {
+                    // Tratar erros de criação de usuário
+                    let errorMessage = 'Erro ao criar conta.';
+                    
+                    switch (error.code) {
+                        case 'auth/email-already-in-use':
+                            errorMessage = 'Este email já está em uso.';
+                            break;
+                        case 'auth/weak-password':
+                            errorMessage = 'A senha é muito fraca.';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage = 'Email inválido.';
+                            break;
+                        default:
+                            errorMessage = error.message;
+                    }
+                    
+                    showMessage(errorMessage, 'error');
+                });
+        });
+        
+        // Função para salvar dados do usuário no Firestore
+        function saveUserData(user, name, provider, unit = '') {
+            const userData = {
+                name: name,
+                email: user.email,
+                provider: provider,
+                unit: unit,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            // Salvar no Firestore na coleção 'users' com o ID do usuário
+            db.collection('users').doc(user.uid).set(userData)
+                .then(() => {
+                    showMessage('Conta criada com sucesso!', 'success');
+                    
+                    // Mudar para a aba de login após cadastro bem-sucedido
+                    setTimeout(() => {
+                        tabs.forEach(t => t.classList.remove('active'));
+                        forms.forEach(f => f.classList.remove('active'));
+                        
+                        document.querySelector('[data-tab="login"]').classList.add('active');
+                        document.getElementById('login-form').classList.add('active');
+                    }, 2000);
+                })
+                .catch((error) => {
+                    console.error('Erro ao salvar dados do usuário:', error);
+                    showMessage('Conta criada, mas houve um erro ao salvar dados adicionais.', 'error');
+                });
+        }
+    </script>
 </body>
 </html>

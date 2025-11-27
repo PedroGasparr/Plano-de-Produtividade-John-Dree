@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProdPlan - zles001</title>
+    <!-- Importar Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <link rel="stylesheet" href="../css/zles001.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span>Prod</span>Plan
+            </div>
+            
+            <ul class="nav-links">
+                <li><a href="operacao.html">Operação</a></li>
+                <li><a href="cadastrar_funcionario.html">Cadastrar Funcionário</a></li>
+                <li><a href="buscar_funcionario.html">Buscar Funcionário</a></li>
+                <li><a href="ranking.html">Ranking</a></li>
+                <li><a href="painel_controle.html">Painel de Controle</a></li>
+                <li><a href="zles001.html" class="active">zles001</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+            </ul>
+            
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-name" id="user-name">Carregando...</div>
+                    <div class="user-role" id="user-role">Usuário</div>
+                </div>
+                <button class="logout-btn" id="logout-btn">Sair</button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="content">
+        <h1 class="page-title">zles001 - Visualização de Conteúdo</h1>
+        
+        <div class="operation-container">
+            <div class="user-unit-info" id="user-unit-info">
+                Carregando informações da unidade...
+            </div>
+            
+            <div class="content-header">
+                <h2 class="content-title" id="content-title">Conteúdo da Unidade</h2>
+                <div class="content-info" id="content-info">Arquivo: Carregando...</div>
+            </div>
+            
+            <div class="content-box" id="content-box">
+                <div class="loading" id="loading-content">
+                    <div class="spinner"></div>
+                    <p>Carregando conteúdo da unidade...</p>
+                </div>
+                
+                <div class="error-message" id="error-message" style="display: none;">
+                    <p>Ocorreu um erro ao carregar o conteúdo. Verifique suas permissões ou tente novamente mais tarde.</p>
+                </div>
+                
+                <div class="warning-message" id="warning-message" style="display: none;">
+                    <p id="warning-text"></p>
+                </div>
+                
+                <div id="file-content" style="display: none;" class="loaded-content"></div>
+            </div>
+            
+            <div class="file-list" id="file-list" style="display: none;">
+                <h3>Outros arquivos disponíveis:</h3>
+                <!-- Lista de arquivos será preenchida aqui -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMu17OV-5ST1rlg00zbpt6Hv37GKqkX4A",
+            authDomain: "projetos-d868d.firebaseapp.com",
+            databaseURL: "https://projetos-d868d-default-rtdb.firebaseio.com",
+            projectId: "projetos-d868d",
+            storageBucket: "projetos-d868d.firebasestorage.app",
+            messagingSenderId: "420029352781",
+            appId: "1:420029352781:web:05176699348e0ccdd78504",
+            measurementId: "G-FXWXRX04WF"
+        };
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        // Elementos da UI
+        const userNameElement = document.getElementById('user-name');
+        const userRoleElement = document.getElementById('user-role');
+        const userUnitInfoElement = document.getElementById('user-unit-info');
+        const contentTitleElement = document.getElementById('content-title');
+        const contentInfoElement = document.getElementById('content-info');
+        const contentBoxElement = document.getElementById('content-box');
+        const loadingContentElement = document.getElementById('loading-content');
+        const errorMessageElement = document.getElementById('error-message');
+        const warningMessageElement = document.getElementById('warning-message');
+        const warningTextElement = document.getElementById('warning-text');
+        const fileContentElement = document.getElementById('file-content');
+        const fileListElement = document.getElementById('file-list');
+        const logoutBtnElement = document.getElementById('logout-btn');
+        
+        // Estado da aplicação
+        let currentUser = null;
+        let userData = null;
+        let currentUnit = '';
+        
+        // Verificar autenticação
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                userNameElement.textContent = 'Carregando...';
+                userRoleElement.textContent = 'Usuário';
+                userUnitInfoElement.textContent = 'Carregando informações da unidade...';
+                
+                // Buscar dados do usuário no Firestore
+                db.collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        userData = doc.data();
+                        userNameElement.textContent = userData.name || user.email;
+                        userRoleElement.textContent = userData.role || 'Usuário';
+                        currentUnit = userData.unit || 'Unidade Teste';
+                        userUnitInfoElement.textContent = `Unidade atual: ${currentUnit}`;
+                        
+                        // Carregar conteúdo da unidade
+                        loadUnitContent();
+                    } else {
+                        console.error("Documento do usuário não encontrado");
+                        showError("Dados do usuário não encontrados. Entre em contato com o administrador.");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Erro ao buscar dados do usuário:", error);
+                    showError("Erro ao carregar dados do usuário.");
+                });
+            } else {
+                // Usuário não autenticado, redirecionar para login
+                window.location.href = 'login.html';
+            }
+        });
+        
+        // Função para carregar conteúdo da unidade
+        function loadUnitContent() {
+            // Primeiro, tentar encontrar o arquivo específico da unidade
+            const unitFileName = `${currentUnit}.html`;
+            
+            db.collection('zles001').doc(unitFileName).get()
+            .then((doc) => {
+                if (doc.exists) {
+                    const fileData = doc.data();
+                    displayContent(fileData);
+                    
+                    // Carregar lista de outros arquivos disponíveis
+                    loadOtherFiles(unitFileName);
+                } else {
+                    // Se não encontrar arquivo específico, procurar por "Unidade Teste.html" como fallback
+                    db.collection('zles001').doc("Unidade Teste.html").get()
+                    .then((testDoc) => {
+                        if (testDoc.exists) {
+                            const fileData = testDoc.data();
+                            displayContent(fileData);
+                            showWarning(`Conteúdo específico para ${currentUnit} não encontrado. Exibindo conteúdo de Unidade Teste.`);
+                        } else {
+                            showError("Nenhum conteúdo encontrado para sua unidade.");
+                        }
+                        
+                        // Carregar lista de arquivos disponíveis
+                        loadOtherFiles(unitFileName);
+                    })
+                    .catch((error) => {
+                        console.error("Erro ao buscar conteúdo de fallback:", error);
+                        showError("Erro ao carregar conteúdo.");
+                    });
+                }
+            })
+            .catch((error) => {
+                console.error("Erro ao buscar conteúdo da unidade:", error);
+                showError("Erro ao carregar conteúdo da unidade.");
+            });
+        }
+        
+        // Função para exibir o conteúdo
+        function displayContent(fileData) {
+            contentTitleElement.textContent = `Conteúdo da ${fileData.unit || currentUnit}`;
+            contentInfoElement.textContent = `Arquivo: ${fileData.fileName}`;
+            
+            // Inserir o conteúdo HTML no elemento
+            fileContentElement.innerHTML = fileData.content || "<p>Conteúdo não disponível.</p>";
+            
+            // Esconder loading e mostrar conteúdo
+            loadingContentElement.style.display = 'none';
+            errorMessageElement.style.display = 'none';
+            warningMessageElement.style.display = 'none';
+            fileContentElement.style.display = 'block';
+        }
+        
+        // Função para carregar lista de outros arquivos
+        function loadOtherFiles(currentFileName) {
+            db.collection('zles001')
+                .orderBy("fileName")
+                .get()
+                .then((querySnapshot) => {
+                    if (!querySnapshot.empty) {
+                        let filesHTML = '';
+                        
+                        querySnapshot.forEach((doc) => {
+                            const fileData = doc.data();
+                            
+                            // Não mostrar o arquivo atual na lista
+                            if (fileData.fileName !== currentFileName) {
+                                filesHTML += `
+                                    <div class="file-item">
+                                        <span class="file-name">${fileData.fileName}</span>
+                                        <span class="file-unit">${fileData.unit}</span>
+                                    </div>
+                                `;
+                            }
+                        });
+                        
+                        if (filesHTML) {
+                            fileListElement.innerHTML = `<h3>Outros arquivos disponíveis:</h3>${filesHTML}`;
+                            fileListElement.style.display = 'block';
+                        }
+                    }
+                })
+                .catch((error) => {
+                    console.error("Erro ao carregar lista de arquivos:", error);
+                    // Não mostrar erro para o usuário, já que o conteúdo principal foi carregado
+                });
+        }
+        
+        // Função para mostrar erro
+        function showError(message) {
+            loadingContentElement.style.display = 'none';
+            fileContentElement.style.display = 'none';
+            warningMessageElement.style.display = 'none';
+            errorMessageElement.innerHTML = `<p>${message}</p>`;
+            errorMessageElement.style.display = 'block';
+        }
+        
+        // Função para mostrar aviso
+        function showWarning(message) {
+            warningTextElement.textContent = message;
+            warningMessageElement.style.display = 'block';
+        }
+        
+        // Evento de logout
+        logoutBtnElement.addEventListener('click', () => {
+            if (confirm('Tem certeza que deseja sair?')) {
+                auth.signOut()
+                    .then(() => {
+                        window.location.href = 'index.html';
+                    })
+                    .catch((error) => {
+                        console.error('Erro ao fazer logout:', error);
+                        alert('Erro ao sair. Tente novamente.');
+                    });
+            }
+        });
+    </script>
+</body>
+</html>

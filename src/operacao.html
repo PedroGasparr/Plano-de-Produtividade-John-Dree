@@ -1,0 +1,2401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema - Operação</title>
+    <!-- Importar Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <!-- Biblioteca jsQR para leitura de QR Code -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <link rel="stylesheet" href="../css/operacao.css">
+    <style>
+        /* Estilos adicionais para os novos recursos */
+        .pause-reason-select {
+            display: none;
+            margin-top: 10px;
+        }
+        
+        .employee-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .remove-employee {
+            background-color: #ff4757;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        
+        .remove-employee:hover {
+            background-color: #ff2e43;
+        }
+
+        .validation-error {
+            color: #d32f2f;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .validation-success {
+            color: #388e3c;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+
+        /* Estilos para os novos tipos de operação */
+        .operation-specific-fields {
+            display: none;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #3498db;
+        }
+
+        .process-steps {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border-left: 4px solid #bdc3c7;
+        }
+
+        .step-item.completed {
+            border-left-color: #27ae60;
+            background: #d5f5e3;
+        }
+
+        .step-item.in-progress {
+            border-left-color: #3498db;
+            background: #d6eaf8;
+        }
+
+        .step-status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            color: white;
+        }
+
+        .status-pending {
+            background-color: #bdc3c7;
+        }
+
+        .status-in-progress {
+            background-color: #3498db;
+        }
+
+        .status-completed {
+            background-color: #27ae60;
+        }
+
+        .step-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .step-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .step-btn.start {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .step-btn.finish {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .step-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        /* Estilos para as etapas nas operações ativas */
+        .load-steps {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .load-step-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border-left: 4px solid #bdc3c7;
+        }
+
+        .load-step-item.completed {
+            border-left-color: #27ae60;
+            background: #d5f5e3;
+        }
+
+        .load-step-item.in-progress {
+            border-left-color: #3498db;
+            background: #d6eaf8;
+        }
+
+        .load-step-status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            color: white;
+        }
+
+        .load-step-info {
+            flex: 1;
+        }
+
+        .load-step-time {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .next-step-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-top: 10px;
+        }
+
+        .next-step-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .next-step-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .finish-step-btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-top: 10px;
+        }
+
+        .finish-step-btn:hover {
+            background-color: #219a52;
+        }
+
+        /* Estilos para o checkbox de reabrir operação */
+        .reopen-checkbox {
+            margin: 15px 0;
+            padding: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+        }
+
+        .reopen-checkbox label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .reopen-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .completed-operations {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .completed-operation-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 4px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .reopen-operation-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        .reopen-operation-btn:hover {
+            background-color: #2980b9;
+        }
+
+        /* Estilos gerais */
+        .operation-form {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .qr-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .qr-button:hover {
+            background-color: #2980b9;
+        }
+
+        .submit-button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .submit-button:hover {
+            background-color: #219a52;
+        }
+
+        .submit-button.finish {
+            background-color: #e74c3c;
+        }
+
+        .submit-button.finish:hover {
+            background-color: #c0392b;
+        }
+
+        .submit-button.pause {
+            background-color: #f39c12;
+        }
+
+        .submit-button.pause:hover {
+            background-color: #d35400;
+        }
+
+        .submit-button.add {
+            background-color: #9b59b6;
+        }
+
+        .submit-button.add:hover {
+            background-color: #8e44ad;
+        }
+
+        .submit-button.reopen {
+            background-color: #3498db;
+        }
+
+        .submit-button.reopen:hover {
+            background-color: #2980b9;
+        }
+
+        .operation-button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+
+        .operation-button:hover {
+            background-color: #219a52;
+        }
+
+        .operation-button.finish {
+            background-color: #e74c3c;
+        }
+
+        .operation-button.finish:hover {
+            background-color: #c0392b;
+        }
+
+        .operation-button.pause {
+            background-color: #f39c12;
+        }
+
+        .operation-button.pause:hover {
+            background-color: #d35400;
+        }
+
+        .operation-button.add {
+            background-color: #9b59b6;
+        }
+
+        .operation-button.add:hover {
+            background-color: #8e44ad;
+        }
+
+        .operation-button.reopen {
+            background-color: #3498db;
+        }
+
+        .operation-button.reopen:hover {
+            background-color: #2980b9;
+        }
+
+        .load-card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-left: 4px solid #3498db;
+        }
+
+        .load-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .load-time {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .load-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background-color: #d5f5e3;
+            color: #27ae60;
+        }
+
+        .status-paused {
+            background-color: #ffeaa7;
+            color: #f39c12;
+        }
+
+        .status-completed {
+            background-color: #d6eaf8;
+            color: #3498db;
+        }
+
+        /* Scanner */
+        #scanner-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #scanner-video {
+            width: 80%;
+            max-width: 500px;
+            border: 2px solid white;
+            border-radius: 8px;
+        }
+
+        #scan-result {
+            color: white;
+            margin: 15px 0;
+            font-size: 16px;
+        }
+
+        .scanner-controls {
+            margin-top: 20px;
+        }
+
+        .scanner-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .scanner-btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .additional-loader {
+            position: relative;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            border-left: 3px solid #3498db;
+        }
+
+        .remove-loader {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+
+        .remove-loader:hover {
+            background-color: #c0392b;
+        }
+
+        .add-loader-button {
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+
+        .add-loader-button:hover {
+            background-color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span>Prod</span>Plan
+            </div>
+            
+            <ul class="nav-links">
+                <li><a href="operacao.html" class="active">Operação</a></li>
+                <li><a href="cadastrar_funcionario.html">Cadastrar Funcionário</a></li>
+                <li><a href="buscar_funcionario.html">Buscar Funcionário</a></li>
+                <li><a href="ranking.html">Ranking</a></li>
+                <li><a href="painel_controle.html">Painel de Controle</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+            </ul>
+            
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-name">Carregando...</div>
+                    <div class="user-role"></div>
+                </div>
+                <button class="logout-btn">Sair</button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="content">
+        <h1 class="page-title">Tela de Operação</h1>
+        
+        <div class="operation-container">
+            <div class="user-unit-info" id="userUnitInfo">
+                Carregando informações da unidade...
+            </div>
+            
+            <div class="action-buttons">
+                <button class="operation-button" id="startOperationBtn">Iniciar Operação</button>
+                <button class="operation-button finish" id="finishOperationBtn">Finalizar Operação</button>
+                <button class="operation-button pause" id="pauseOperationBtn">Pausar/Retomar Operação</button>
+                <button class="operation-button add" id="addEmployeeBtn">Adicionar/Remover Funcionário</button>
+                <button class="operation-button reopen" id="reopenOperationBtn">Reabrir Operação Finalizada</button>
+            </div>
+            
+            <!-- Formulário de Iniciar Operação -->
+            <div class="operation-form" id="operationForm">
+                <h2>Iniciar Operação</h2>
+                
+                <div class="form-group">
+                    <label for="employeeCode">Código do Funcionário Principal</label>
+                    <input type="text" id="employeeCode" placeholder="Ex: GZL-EO-1234">
+                    <div class="validation-error" id="employeeCodeError"></div>
+                    <div class="validation-success" id="employeeCodeSuccess"></div>
+                    <button class="qr-button" id="scanQRBtn">Ler QR Code</button>
+                </div>
+                
+                <div id="additionalLoaders">
+                    <!-- Campos adicionais para outros carregadores serão inseridos aqui -->
+                </div>
+                
+                <button class="add-loader-button" id="addLoaderBtn">Adicionar mais funcionários</button>
+                
+                <div class="form-group">
+                    <label for="operationType">Tipo de Operação</label>
+                    <select id="operationType">
+                        <option value="">Selecione o tipo de operação</option>
+                        <option value="simulacao">Simulação</option>
+                        <option value="enderecamento">Endereçamento/Locate</option>
+                        <option value="shipment">Shipment</option>
+                        <option value="carregamento">Carregamento de Carga</option>
+                    </select>
+                </div>
+                
+                <!-- Campos específicos para SIMULAÇÃO -->
+                <div class="operation-specific-fields" id="simulacaoFields">
+                    <h3>Dados da Simulação</h3>
+                    <div class="form-group">
+                        <label for="simulacaoEndereco">Endereço/Área</label>
+                        <input type="text" id="simulacaoEndereco" placeholder="Ex: Área A12">
+                    </div>
+                    <div class="form-group">
+                        <label for="simulacaoDestino">Destino</label>
+                        <input type="text" id="simulacaoDestino" placeholder="Ex: São Paulo">
+                    </div>
+                    <div class="form-group">
+                        <label for="simulacaoDoca">Doca</label>
+                        <select id="simulacaoDoca">
+                            <option value="">Selecione a Doca</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Campos específicos para ENDEREÇAMENTO -->
+                <div class="operation-specific-fields" id="enderecamentoFields">
+                    <h3>Dados do Endereçamento</h3>
+                    <div class="form-group">
+                        <label for="enderecamentoSurf">Número SURF</label>
+                        <input type="text" id="enderecamentoSurf" placeholder="Ex: SURF-12345">
+                    </div>
+                    <div class="form-group">
+                        <label for="enderecamentoDestino">Destino</label>
+                        <input type="text" id="enderecamentoDestino" placeholder="Ex: Rio de Janeiro">
+                    </div>
+                    <div class="form-group">
+                        <label for="enderecamentoDoca">Doca</label>
+                        <select id="enderecamentoDoca">
+                            <option value="">Selecione a Doca</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Campos específicos para SHIPMENT -->
+                <div class="operation-specific-fields" id="shipmentFields">
+                    <h3>Dados do Shipment</h3>
+                    <div class="form-group">
+                        <label for="shipmentNumero">Número do Shipment</label>
+                        <input type="text" id="shipmentNumero" placeholder="Digite o número do shipment">
+                    </div>
+                    <div class="form-group">
+                        <label for="shipmentTransporte">Tipo de Transporte</label>
+                        <select id="shipmentTransporte">
+                            <option value="">Selecione...</option>
+                            <option value="maritimo">Marítimo</option>
+                            <option value="rodoviario">Rodoviário</option>
+                            <option value="aereo_bau">Aéreo Baú</option>
+                            <option value="aereo_sider">Aéreo Sider</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="shipmentSurf">Código SURF</label>
+                        <input type="text" id="shipmentSurf" placeholder="Digite o código SURF">
+                    </div>
+                    <div class="form-group">
+                        <label for="shipmentDoca">Doca</label>
+                        <input type="text" id="shipmentDoca" placeholder="Digite a doca">
+                    </div>
+                    <div class="form-group">
+                        <label for="shipmentDestino">Destino</label>
+                        <input type="text" id="shipmentDestino" placeholder="Digite o destino">
+                    </div>
+                </div>
+                
+                <!-- Campos específicos para CARREGAMENTO DE CARGA -->
+                <div class="operation-specific-fields" id="carregamentoFields">
+                    <h3>Carregamento de Carga</h3>
+                    <div class="form-group">
+                        <label for="carregamentoShipment">Selecionar Shipment</label>
+                        <select id="carregamentoShipment">
+                            <option value="">Selecione um shipment</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="submit-button" id="submitOperationBtn">Iniciar Operação</button>
+            </div>
+            
+            <!-- Formulário de Finalizar Operação -->
+            <div class="operation-form" id="finishOperationForm">
+                <h2>Finalizar Operação</h2>
+                
+                <div class="form-group">
+                    <label for="finishEmployeeCode">Código do Funcionário Principal</label>
+                    <input type="text" id="finishEmployeeCode" placeholder="Ex: GZL-EO-1234">
+                    <button class="qr-button" id="scanFinishQRBtn">Ler QR Code</button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="finishOperationType">Selecionar Operação</label>
+                    <select id="finishOperationType">
+                        <option value="">Selecione a operação</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="materialMix">Quantidade de Mix de Material</label>
+                    <input type="number" id="materialMix" placeholder="Ex: 5" min="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="tonsLoaded">Toneladas Carregadas</label>
+                    <input type="number" id="tonsLoaded" placeholder="Ex: 10.5" step="0.1" min="0.1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="observation">Observação/Justificativa</label>
+                    <textarea id="observation" placeholder="Digite observações ou justificativas aqui..."></textarea>
+                </div>
+
+                <!-- Checkbox para permitir reabertura -->
+                <div class="reopen-checkbox">
+                    <label>
+                        <input type="checkbox" id="allowReopen">
+                        Permitir reabertura desta operação
+                    </label>
+                    <small style="display: block; margin-top: 5px; color: #666;">
+                        Se marcado, esta operação poderá ser reaberta posteriormente se necessário.
+                    </small>
+                </div>
+                
+                <button class="submit-button finish" id="submitFinishBtn">Finalizar Operação</button>
+            </div>
+            
+            <!-- Formulário de Pausar/Retomar Operação -->
+            <div class="operation-form" id="pauseOperationForm">
+                <h2>Pausar/Retomar Operação</h2>
+                
+                <div class="form-group">
+                    <label for="pauseEmployeeCode">Código do Funcionário</label>
+                    <input type="text" id="pauseEmployeeCode" placeholder="Ex: GZL-EO-1234">
+                    <button class="qr-button" id="scanPauseQRBtn">Ler QR Code</button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="selectPauseOperation">Selecionar Operação</label>
+                    <select id="selectPauseOperation">
+                        <option value="">Selecione uma operação em andamento</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="pauseAction">Ação</label>
+                    <select id="pauseAction">
+                        <option value="pausar">Pausar</option>
+                        <option value="retomar">Retomar</option>
+                    </select>
+                </div>
+                
+                <div class="pause-reason-select" id="pauseReasonContainer">
+                    <label for="pauseReason">Motivo da Pausa</label>
+                    <select id="pauseReason">
+                        <option value="pausar_refeicao">Pausar (Refeição)</option>
+                        <option value="retomar_refeicao">Retomar (Após Refeição)</option>
+                        <option value="pausar_faturar">Pausar (Aguardando Faturar)</option>
+                        <option value="retomar_faturar">Retomar (Após Faturar)</option>
+                        <option value="pausar_treinamento">Pausar (Treinamento)</option>
+                        <option value="retomar_treinamento">Retomar (Após Treinamento)</option>
+                        <option value="pausar_sna">Pausar (SNA)</option>
+                        <option value="retomar_sna">Retomar (Após SNA)</option>
+                        <option value="pausar_prioridade">Pausar (Prioridade Operacional)</option>
+                        <option value="retomar_prioridade">Retomar (Após Prioridade)</option>
+                        <option value="pausar_limpeza">Pausar (Limpeza/Organização)</option>
+                        <option value="retomar_limpeza">Retomar (Após Limpeza)</option>
+                        <option value="pausar_ocorrencia">Pausar (Ocorrência)</option>
+                        <option value="retomar_ocorrencia">Retomar (Após Ocorrência)</option>
+                        <option value="pausar_tombamento">Pausar (Tombamento)</option>
+                        <option value="retomar_tombamento">Retomar (Após Tombamento)</option>
+                        <option value="pausar_chuva">Pausar (Chuva)</option>
+                        <option value="retomar_chuva">Retomar (Após Chuva)</option>
+                    </select>
+                </div>
+                
+                <button class="submit-button pause" id="submitPauseBtn">Executar Ação</button>
+            </div>
+            
+            <!-- Formulário de Adicionar/Remover Funcionário -->
+            <div class="operation-form" id="addEmployeeForm">
+                <h2>Adicionar/Remover Funcionário</h2>
+                
+                <div class="form-group">
+                    <label for="selectEmployeeOperation">Selecionar Operação</label>
+                    <select id="selectEmployeeOperation">
+                        <option value="">Selecione uma operação em andamento</option>
+                    </select>
+                </div>
+                
+                <div class="employee-list" id="currentEmployees">
+                    <p>Funcionários atuais na operação:</p>
+                    <!-- Lista de funcionários será preenchida aqui -->
+                </div>
+                
+                <div class="form-group">
+                    <label for="newEmployeeCode">Código do Funcionário a Adicionar</label>
+                    <input type="text" id="newEmployeeCode" placeholder="Ex: GZL-EO-1234">
+                    <button class="qr-button" id="scanNewEmployeeQRBtn">Ler QR Code</button>
+                </div>
+                
+                <button class="submit-button add" id="submitAddEmployeeBtn">Adicionar Funcionário</button>
+                <button class="submit-button remove" id="submitRemoveEmployeeBtn" style="background-color: #ff4757; margin-left: 10px;">Remover Funcionário Selecionado</button>
+            </div>
+
+            <!-- Formulário de Reabrir Operação -->
+            <div class="operation-form" id="reopenOperationForm">
+                <h2>Reabrir Operação Finalizada</h2>
+                
+                <div class="form-group">
+                    <label for="reopenEmployeeCode">Código do Funcionário</label>
+                    <input type="text" id="reopenEmployeeCode" placeholder="Ex: GZL-EO-1234">
+                    <button class="qr-button" id="scanReopenQRBtn">Ler QR Code</button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="selectReopenOperation">Selecionar Operação Finalizada</label>
+                    <select id="selectReopenOperation">
+                        <option value="">Selecione uma operação finalizada</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reopenReason">Motivo da Reabertura</label>
+                    <textarea id="reopenReason" placeholder="Digite o motivo para reabrir esta operação..."></textarea>
+                </div>
+                
+                <button class="submit-button reopen" id="submitReopenBtn">Reabrir Operação</button>
+            </div>
+            
+            <div class="active-loads" id="activeLoadsContainer">
+                <h2>Operações Ativas</h2>
+                <div id="activeLoadsList">
+                    <!-- As operações ativas serão exibidas aqui -->
+                </div>
+            </div>
+
+            <!-- Seção para operações finalizadas que podem ser reabertas -->
+            <div class="completed-operations" id="completedOperationsContainer" style="display: none;">
+                <h2>Operações Finalizadas (Reabríveis)</h2>
+                <div id="completedOperationsList">
+                    <!-- As operações finalizadas que podem ser reabertas serão exibidas aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scanner de QR Code -->
+    <div id="scanner-container">
+        <video id="scanner-video" playsinline></video>
+        <div id="scan-result"></div>
+        <div class="scanner-controls">
+            <button class="scanner-btn cancel" id="cancel-scan">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal para cadastro de novo colaborador -->
+    <div id="employeeModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Cadastrar Novo Colaborador</h2>
+            <p>Colaborador não encontrado. Por favor, complete o cadastro:</p>
+            
+            <div class="form-group">
+                <label for="employeeId">Código do Funcionário</label>
+                <input type="text" id="employeeId" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="employeeName">Nome do Colaborador</label>
+                <input type="text" id="employeeName" placeholder="Digite o nome completo">
+            </div>
+            
+            <div class="form-group">
+                <label for="employeeUnit">Unidade</label>
+                <input type="text" id="employeeUnit" readonly>
+            </div>
+            
+            <button class="submit-button" id="saveEmployeeBtn">Salvar e Continuar</button>
+        </div>
+    </div>
+
+    <!-- Modal para avançar etapa -->
+    <div id="nextStepModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Avançar Etapa</h2>
+            <p>Confirme o avanço para a próxima etapa:</p>
+            
+            <div class="form-group">
+                <label for="nextStepEmployeeCode">Código do Funcionário</label>
+                <input type="text" id="nextStepEmployeeCode" placeholder="Ex: GZL-EO-1234">
+                <button class="qr-button" id="scanNextStepQRBtn">Ler QR Code</button>
+            </div>
+            
+            <div id="nextStepInfo">
+                <!-- Informações da etapa serão exibidas aqui -->
+            </div>
+            
+            <button class="submit-button" id="confirmNextStepBtn">Confirmar Avanço</button>
+        </div>
+    </div>
+
+    <!-- Modal para finalizar etapa do lacre -->
+    <div id="finishLacreModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Finalizar Aguardando Lacre</h2>
+            <p>Confirme a finalização da etapa "Aguardando Lacre":</p>
+            
+            <div class="form-group">
+                <label for="finishLacreEmployeeCode">Código do Funcionário</label>
+                <input type="text" id="finishLacreEmployeeCode" placeholder="Ex: GZL-EO-1234">
+                <button class="qr-button" id="scanFinishLacreQRBtn">Ler QR Code</button>
+            </div>
+            
+            <div id="finishLacreInfo">
+                <!-- Informações da etapa serão exibidas aqui -->
+            </div>
+            
+            <button class="submit-button finish" id="confirmFinishLacreBtn">Finalizar Etapa</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMu17OV-5ST1rlg00zbpt6Hv37GKqkX4A",
+            authDomain: "projetos-d868d.firebaseapp.com",
+            databaseURL: "https://projetos-d868d-default-rtdb.firebaseio.com",
+            projectId: "projetos-d868d",
+            storageBucket: "projetos-d868d.firebasestorage.app",
+            messagingSenderId: "420029352781",
+            appId: "1:420029352781:web:05176699348e0ccdd78504",
+            measurementId: "G-FXWXRX04WF"
+        };
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // Estado da aplicação
+        let currentUser = null;
+        let userData = null;
+        let currentUnit = '';
+        let activeLoads = {};
+        let completedLoads = {};
+        let loadIntervals = {};
+        let scannerActive = false;
+        let stream = null;
+        let currentScannerInput = null;
+        let scanningInterval = null;
+        let canvas = null;
+        let canvasContext = null;
+        let selectedEmployeeToRemove = null;
+        let validatedEmployees = {};
+        let currentOperationForNextStep = null;
+        let currentOperationForFinishLacre = null;
+
+        // Inicialização quando o DOM estiver carregado
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            setupFirebaseAuth();
+            setupEventListeners();
+            setupOperationTypeListener();
+            setupPauseReasonToggle();
+        }
+
+        function setupFirebaseAuth() {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    currentUser = user;
+                    loadUserData(user.uid);
+                } else {
+                    window.location.href = 'login.html';
+                }
+            });
+        }
+
+        function loadUserData(uid) {
+            db.collection('users').doc(uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        userData = doc.data();
+                        document.querySelector('.user-name').textContent = userData.name;
+                        currentUnit = userData.unit;
+                        document.getElementById('userUnitInfo').textContent = `Unidade atual: ${currentUnit}`;
+                        document.getElementById('employeeUnit').value = currentUnit;
+                        
+                        loadActiveLoads();
+                        loadCompletedLoads();
+                    }
+                })
+                .catch(console.error);
+        }
+
+        function setupEventListeners() {
+            // Botões principais
+            document.getElementById('startOperationBtn').addEventListener('click', showOperationForm);
+            document.getElementById('finishOperationBtn').addEventListener('click', showFinishForm);
+            document.getElementById('pauseOperationBtn').addEventListener('click', showPauseForm);
+            document.getElementById('addEmployeeBtn').addEventListener('click', showAddEmployeeForm);
+            document.getElementById('reopenOperationBtn').addEventListener('click', showReopenForm);
+            
+            // Scanner QR Code
+            document.getElementById('scanQRBtn').addEventListener('click', () => startScanner('employeeCode'));
+            document.getElementById('scanFinishQRBtn').addEventListener('click', () => startScanner('finishEmployeeCode'));
+            document.getElementById('scanPauseQRBtn').addEventListener('click', () => startScanner('pauseEmployeeCode'));
+            document.getElementById('scanNewEmployeeQRBtn').addEventListener('click', () => startScanner('newEmployeeCode'));
+            document.getElementById('scanNextStepQRBtn').addEventListener('click', () => startScanner('nextStepEmployeeCode'));
+            document.getElementById('scanFinishLacreQRBtn').addEventListener('click', () => startScanner('finishLacreEmployeeCode'));
+            document.getElementById('scanReopenQRBtn').addEventListener('click', () => startScanner('reopenEmployeeCode'));
+            document.getElementById('cancel-scan').addEventListener('click', stopScanner);
+            
+            // Formulários
+            document.getElementById('submitOperationBtn').addEventListener('click', startOperation);
+            document.getElementById('submitFinishBtn').addEventListener('click', finishOperation);
+            document.getElementById('submitPauseBtn').addEventListener('click', pauseResumeOperation);
+            document.getElementById('submitAddEmployeeBtn').addEventListener('click', addEmployeeToOperation);
+            document.getElementById('submitRemoveEmployeeBtn').addEventListener('click', removeEmployeeFromOperation);
+            document.getElementById('submitReopenBtn').addEventListener('click', reopenOperation);
+            
+            // Funcionários adicionais
+            document.getElementById('addLoaderBtn').addEventListener('click', addAdditionalLoader);
+            
+            // Modal colaborador
+            document.getElementById('saveEmployeeBtn').addEventListener('click', saveEmployee);
+            document.querySelector('#employeeModal .close').addEventListener('click', () => closeModal('employeeModal'));
+            
+            // Modal próxima etapa
+            document.getElementById('confirmNextStepBtn').addEventListener('click', confirmNextStep);
+            document.querySelector('#nextStepModal .close').addEventListener('click', () => closeModal('nextStepModal'));
+            
+            // Modal finalizar lacre
+            document.getElementById('confirmFinishLacreBtn').addEventListener('click', confirmFinishLacre);
+            document.querySelector('#finishLacreModal .close').addEventListener('click', () => closeModal('finishLacreModal'));
+            
+            // Logout
+            document.querySelector('.logout-btn').addEventListener('click', logout);
+        }
+
+        function setupOperationTypeListener() {
+            document.getElementById('operationType').addEventListener('change', function() {
+                // Ocultar todos os campos específicos
+                document.querySelectorAll('.operation-specific-fields').forEach(field => {
+                    field.style.display = 'none';
+                });
+                
+                // Mostrar campos específicos baseados no tipo selecionado
+                switch(this.value) {
+                    case 'simulacao':
+                        document.getElementById('simulacaoFields').style.display = 'block';
+                        break;
+                    case 'enderecamento':
+                        document.getElementById('enderecamentoFields').style.display = 'block';
+                        break;
+                    case 'shipment':
+                        document.getElementById('shipmentFields').style.display = 'block';
+                        break;
+                    case 'carregamento':
+                        document.getElementById('carregamentoFields').style.display = 'block';
+                        loadAvailableShipments();
+                        break;
+                }
+            });
+        }
+
+        function setupPauseReasonToggle() {
+            document.getElementById('pauseAction').addEventListener('change', function() {
+                const reasonContainer = document.getElementById('pauseReasonContainer');
+                if (this.value === 'pausar' || this.value === 'retomar') {
+                    reasonContainer.style.display = 'block';
+                    // Filtrar opções baseadas na ação
+                    const options = document.getElementById('pauseReason').options;
+                    for (let option of options) {
+                        option.style.display = option.value.startsWith(this.value) ? '' : 'none';
+                    }
+                    // Reset para primeira opção válida
+                    document.getElementById('pauseReason').selectedIndex = 0;
+                } else {
+                    reasonContainer.style.display = 'none';
+                }
+            });
+        }
+
+        // ========== FUNÇÕES DE INTERFACE ==========
+
+        function showOperationForm() {
+            hideAllForms();
+            document.getElementById('operationForm').style.display = 'block';
+        }
+
+        function showFinishForm() {
+            hideAllForms();
+            document.getElementById('finishOperationForm').style.display = 'block';
+            updateOperationSelects();
+        }
+
+        function showPauseForm() {
+            hideAllForms();
+            document.getElementById('pauseOperationForm').style.display = 'block';
+            updateOperationSelects();
+        }
+
+        function showAddEmployeeForm() {
+            hideAllForms();
+            document.getElementById('addEmployeeForm').style.display = 'block';
+            updateOperationSelects();
+            updateEmployeeList();
+        }
+
+        function showReopenForm() {
+            hideAllForms();
+            document.getElementById('reopenOperationForm').style.display = 'block';
+            updateReopenOperationSelect();
+        }
+
+        function hideAllForms() {
+            document.getElementById('operationForm').style.display = 'none';
+            document.getElementById('finishOperationForm').style.display = 'none';
+            document.getElementById('pauseOperationForm').style.display = 'none';
+            document.getElementById('addEmployeeForm').style.display = 'none';
+            document.getElementById('reopenOperationForm').style.display = 'none';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // ========== FUNÇÕES DAS OPERAÇÕES ==========
+
+        function startOperation() {
+            const employeeCode = document.getElementById('employeeCode').value;
+            const operationType = document.getElementById('operationType').value;
+            
+            const additionalLoaders = [];
+            const additionalLoaderInputs = document.querySelectorAll('.additional-loader input[type="text"]');
+            additionalLoaderInputs.forEach(input => {
+                if (input.value) {
+                    additionalLoaders.push(input.value);
+                }
+            });
+            
+            let operationSpecificData = {};
+            
+            switch(operationType) {
+                case 'simulacao':
+                    operationSpecificData = {
+                        endereco: document.getElementById('simulacaoEndereco').value,
+                        destino: document.getElementById('simulacaoDestino').value,
+                        doca: document.getElementById('simulacaoDoca').value
+                    };
+                    break;
+                case 'enderecamento':
+                    operationSpecificData = {
+                        surfNumber: document.getElementById('enderecamentoSurf').value,
+                        destino: document.getElementById('enderecamentoDestino').value,
+                        doca: document.getElementById('enderecamentoDoca').value
+                    };
+                    break;
+                case 'shipment':
+                    operationSpecificData = {
+                        shipmentNumber: document.getElementById('shipmentNumero').value,
+                        transportType: document.getElementById('shipmentTransporte').value,
+                        surfCode: document.getElementById('shipmentSurf').value,
+                        doca: document.getElementById('shipmentDoca').value,
+                        destination: document.getElementById('shipmentDestino').value
+                    };
+                    break;
+                case 'carregamento':
+                    const shipmentId = document.getElementById('carregamentoShipment').value;
+                    if (!shipmentId) {
+                        alert('Por favor, selecione um shipment');
+                        return;
+                    }
+                    operationSpecificData = {
+                        shipmentId: shipmentId,
+                        steps: {
+                            abertura: { status: 'in-progress', startTime: new Date(), endTime: null },
+                            carregamento: { status: 'pending', startTime: null, endTime: null },
+                            fechamento: { status: 'pending', startTime: null, endTime: null },
+                            preCinto: { status: 'pending', startTime: null, endTime: null },
+                            aguardandoLacre: { status: 'pending', startTime: null, endTime: null }
+                        },
+                        currentStep: 'abertura'
+                    };
+                    break;
+            }
+            
+            if (!employeeCode || !operationType) {
+                alert('Por favor, preencha todos os campos obrigatórios');
+                return;
+            }
+            
+            // Validação específica para cada tipo de operação
+            let validationError = '';
+            switch(operationType) {
+                case 'simulacao':
+                    if (!operationSpecificData.endereco || !operationSpecificData.destino || !operationSpecificData.doca) {
+                        validationError = 'Por favor, preencha todos os campos da Simulação';
+                    }
+                    break;
+                case 'enderecamento':
+                    if (!operationSpecificData.surfNumber || !operationSpecificData.destino || !operationSpecificData.doca) {
+                        validationError = 'Por favor, preencha todos os campos do Endereçamento';
+                    }
+                    break;
+                case 'shipment':
+                    if (!operationSpecificData.shipmentNumber || !operationSpecificData.transportType || 
+                        !operationSpecificData.surfCode || !operationSpecificData.doca || !operationSpecificData.destination) {
+                        validationError = 'Por favor, preencha todos os campos do Shipment';
+                    }
+                    break;
+                case 'carregamento':
+                    if (!operationSpecificData.shipmentId) {
+                        validationError = 'Por favor, selecione um shipment';
+                    }
+                    break;
+            }
+            
+            if (validationError) {
+                alert(validationError);
+                return;
+            }
+            
+            checkEmployeeExists(employeeCode)
+                .then(employeeName => {
+                    const operationData = {
+                        employeeCode: employeeCode,
+                        employeeName: employeeName,
+                        additionalLoaders: additionalLoaders,
+                        type: operationType,
+                        unit: currentUnit,
+                        startTime: new Date(),
+                        status: 'active',
+                        createdBy: currentUser.uid,
+                        createdAt: new Date(),
+                        allowReopen: false,
+                        ...operationSpecificData
+                    };
+                    
+                    return db.collection('operations').add(operationData);
+                })
+                .then(() => {
+                    alert('Operação iniciada com sucesso!');
+                    hideAllForms();
+                    resetOperationForm();
+                })
+                .catch((error) => {
+                    console.error("Erro ao iniciar operação:", error);
+                    alert('Erro ao iniciar operação: ' + error.message);
+                });
+        }
+
+        function finishOperation() {
+            const employeeCode = document.getElementById('finishEmployeeCode').value;
+            const operationId = document.getElementById('finishOperationType').value;
+            const materialMix = document.getElementById('materialMix').value;
+            const tonsLoaded = document.getElementById('tonsLoaded').value;
+            const observation = document.getElementById('observation').value;
+            const allowReopen = document.getElementById('allowReopen').checked;
+            
+            if (!employeeCode || !operationId) {
+                alert('Por favor, preencha todos os campos obrigatórios');
+                return;
+            }
+            
+            const operation = activeLoads[operationId];
+            if (!operation) {
+                alert('Operação não encontrada');
+                return;
+            }
+            
+            // Verificar se o funcionário pertence à operação
+            if (operation.employeeCode !== employeeCode && 
+                (!operation.additionalLoaders || !operation.additionalLoaders.includes(employeeCode))) {
+                alert('Este funcionário não pertence à operação selecionada');
+                return;
+            }
+            
+            const updateData = {
+                status: 'completed',
+                endTime: new Date(),
+                completedBy: currentUser.uid,
+                allowReopen: allowReopen
+            };
+            
+            // Adicionar campos opcionais apenas se preenchidos
+            if (materialMix) updateData.materialMix = parseInt(materialMix);
+            if (tonsLoaded) updateData.tonsLoaded = parseFloat(tonsLoaded);
+            if (observation) updateData.observation = observation;
+            
+            db.collection('operations').doc(operationId).update(updateData)
+            .then(() => {
+                alert('Operação finalizada com sucesso!' + (allowReopen ? ' (Pode ser reaberta)' : ''));
+                hideAllForms();
+                resetFinishForm();
+            })
+            .catch((error) => {
+                console.error("Erro ao finalizar operação:", error);
+                alert('Erro ao finalizar operação: ' + error.message);
+            });
+        }
+
+        function reopenOperation() {
+            const employeeCode = document.getElementById('reopenEmployeeCode').value;
+            const operationId = document.getElementById('selectReopenOperation').value;
+            const reopenReason = document.getElementById('reopenReason').value;
+            
+            if (!employeeCode || !operationId || !reopenReason) {
+                alert('Por favor, preencha todos os campos obrigatórios');
+                return;
+            }
+            
+            const operation = completedLoads[operationId];
+            if (!operation) {
+                alert('Operação não encontrada');
+                return;
+            }
+            
+            // Verificar se a operação permite reabertura
+            if (!operation.allowReopen) {
+                alert('Esta operação não permite reabertura');
+                return;
+            }
+            
+            // Verificar se o funcionário pertence à operação
+            if (operation.employeeCode !== employeeCode && 
+                (!operation.additionalLoaders || !operation.additionalLoaders.includes(employeeCode))) {
+                alert('Este funcionário não pertence à operação selecionada');
+                return;
+            }
+            
+            const updateData = {
+                status: 'active',
+                reopenedTime: new Date(),
+                reopenReason: reopenReason,
+                reopenedBy: currentUser.uid,
+                // Para operações de carregamento, reiniciar as etapas se necessário
+                ...(operation.type === 'carregamento' && {
+                    currentStep: 'abertura',
+                    'steps.abertura.status': 'in-progress',
+                    'steps.abertura.startTime': new Date(),
+                    'steps.abertura.endTime': null,
+                    'steps.carregamento.status': 'pending',
+                    'steps.carregamento.startTime': null,
+                    'steps.carregamento.endTime': null,
+                    'steps.fechamento.status': 'pending',
+                    'steps.fechamento.startTime': null,
+                    'steps.fechamento.endTime': null,
+                    'steps.preCinto.status': 'pending',
+                    'steps.preCinto.startTime': null,
+                    'steps.preCinto.endTime': null,
+                    'steps.aguardandoLacre.status': 'pending',
+                    'steps.aguardandoLacre.startTime': null,
+                    'steps.aguardandoLacre.endTime': null
+                })
+            };
+            
+            db.collection('operations').doc(operationId).update(updateData)
+            .then(() => {
+                alert('Operação reaberta com sucesso!');
+                hideAllForms();
+                resetReopenForm();
+            })
+            .catch((error) => {
+                console.error("Erro ao reabrir operação:", error);
+                alert('Erro ao reabrir operação: ' + error.message);
+            });
+        }
+
+        function pauseResumeOperation() {
+            const employeeCode = document.getElementById('pauseEmployeeCode').value;
+            const operationId = document.getElementById('selectPauseOperation').value;
+            const action = document.getElementById('pauseAction').value;
+            const reason = document.getElementById('pauseReason').value;
+            
+            if (!employeeCode || !operationId) {
+                alert('Por favor, preencha todos os campos obrigatórios');
+                return;
+            }
+            
+            const operation = activeLoads[operationId];
+            if (!operation || (operation.employeeCode !== employeeCode && 
+                (!operation.additionalLoaders || !operation.additionalLoaders.includes(employeeCode)))) {
+                alert('Este funcionário não pertence à operação selecionada');
+                return;
+            }
+            
+            if (action === 'pausar') {
+                db.collection('operations').doc(operationId).update({
+                    status: 'paused',
+                    pausedTime: new Date(),
+                    pauseReason: reason,
+                    pausedBy: currentUser.uid
+                })
+                .then(() => {
+                    alert('Operação pausada com sucesso!');
+                    hideAllForms();
+                    resetPauseForm();
+                })
+                .catch(console.error);
+            } else {
+                db.collection('operations').doc(operationId).update({
+                    status: 'active',
+                    resumedTime: new Date(),
+                    resumeReason: reason,
+                    resumedBy: currentUser.uid
+                })
+                .then(() => {
+                    alert('Operação retomada com sucesso!');
+                    hideAllForms();
+                    resetPauseForm();
+                })
+                .catch(console.error);
+            }
+        }
+
+        // ========== FUNÇÕES DE CARREGAMENTO DE DADOS ==========
+
+        function loadActiveLoads() {
+            db.collection('operations')
+                .where('unit', '==', currentUnit)
+                .where('status', 'in', ['active', 'paused'])
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added' || change.type === 'modified') {
+                            const loadData = change.doc.data();
+                            activeLoads[change.doc.id] = loadData;
+                            updateLoadDisplay(change.doc.id, loadData);
+                        }
+                        if (change.type === 'removed') {
+                            delete activeLoads[change.doc.id];
+                            removeLoadDisplay(change.doc.id);
+                        }
+                    });
+                    
+                    updateOperationSelects();
+                    
+                    if (Object.keys(activeLoads).length > 0) {
+                        document.getElementById('activeLoadsContainer').style.display = 'block';
+                    } else {
+                        document.getElementById('activeLoadsContainer').style.display = 'none';
+                    }
+                });
+        }
+
+        function loadCompletedLoads() {
+            db.collection('operations')
+                .where('unit', '==', currentUnit)
+                .where('status', '==', 'completed')
+                .where('allowReopen', '==', true)
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added' || change.type === 'modified') {
+                            const loadData = change.doc.data();
+                            completedLoads[change.doc.id] = loadData;
+                        }
+                        if (change.type === 'removed') {
+                            delete completedLoads[change.doc.id];
+                        }
+                    });
+                    
+                    updateCompletedOperationsDisplay();
+                    updateReopenOperationSelect();
+                    
+                    if (Object.keys(completedLoads).length > 0) {
+                        document.getElementById('completedOperationsContainer').style.display = 'block';
+                    } else {
+                        document.getElementById('completedOperationsContainer').style.display = 'none';
+                    }
+                });
+        }
+
+        function updateReopenOperationSelect() {
+            const select = document.getElementById('selectReopenOperation');
+            select.innerHTML = '<option value="">Selecione uma operação finalizada</option>';
+            
+            Object.keys(completedLoads).forEach(loadId => {
+                const load = completedLoads[loadId];
+                if (load.allowReopen) {
+                    let optionText = `${getOperationTypeName(load.type)} - ${load.employeeCode}`;
+                    
+                    if (load.doca) optionText += ` - Doca ${load.doca}`;
+                    if (load.destino) optionText += ` - ${load.destino}`;
+                    if (load.shipmentNumber) optionText += ` - ${load.shipmentNumber}`;
+                    
+                    const option = document.createElement('option');
+                    option.value = loadId;
+                    option.textContent = optionText;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        function updateCompletedOperationsDisplay() {
+            const container = document.getElementById('completedOperationsList');
+            container.innerHTML = '';
+            
+            Object.keys(completedLoads).forEach(loadId => {
+                const load = completedLoads[loadId];
+                if (load.allowReopen) {
+                    const endTime = load.endTime ? load.endTime.toDate() : new Date();
+                    
+                    const operationElement = document.createElement('div');
+                    operationElement.className = 'completed-operation-item';
+                    operationElement.innerHTML = `
+                        <div class="operation-info">
+                            <div><strong>${getOperationTypeName(load.type)}</strong> - ${load.employeeName || load.employeeCode}</div>
+                            <div>Finalizada em: ${formatTime(endTime)}</div>
+                            ${load.doca ? `<div>Doca: ${load.doca}</div>` : ''}
+                            ${load.destino ? `<div>Destino: ${load.destino}</div>` : ''}
+                        </div>
+                        <button class="reopen-operation-btn" onclick="quickReopenOperation('${loadId}')">Reabrir</button>
+                    `;
+                    
+                    container.appendChild(operationElement);
+                }
+            });
+        }
+
+        function quickReopenOperation(operationId) {
+            const operation = completedLoads[operationId];
+            if (!operation || !operation.allowReopen) {
+                alert('Esta operação não pode ser reaberta');
+                return;
+            }
+            
+            const reopenReason = prompt('Digite o motivo para reabrir esta operação:');
+            if (!reopenReason) {
+                alert('É necessário informar o motivo da reabertura');
+                return;
+            }
+            
+            const updateData = {
+                status: 'active',
+                reopenedTime: new Date(),
+                reopenReason: reopenReason,
+                reopenedBy: currentUser.uid,
+                ...(operation.type === 'carregamento' && {
+                    currentStep: 'abertura',
+                    'steps.abertura.status': 'in-progress',
+                    'steps.abertura.startTime': new Date(),
+                    'steps.abertura.endTime': null,
+                    'steps.carregamento.status': 'pending',
+                    'steps.carregamento.startTime': null,
+                    'steps.carregamento.endTime': null,
+                    'steps.fechamento.status': 'pending',
+                    'steps.fechamento.startTime': null,
+                    'steps.fechamento.endTime': null,
+                    'steps.preCinto.status': 'pending',
+                    'steps.preCinto.startTime': null,
+                    'steps.preCinto.endTime': null,
+                    'steps.aguardandoLacre.status': 'pending',
+                    'steps.aguardandoLacre.startTime': null,
+                    'steps.aguardandoLacre.endTime': null
+                })
+            };
+            
+            db.collection('operations').doc(operationId).update(updateData)
+            .then(() => {
+                alert('Operação reaberta com sucesso!');
+            })
+            .catch((error) => {
+                console.error("Erro ao reabrir operação:", error);
+                alert('Erro ao reabrir operação: ' + error.message);
+            });
+        }
+
+        // ========== FUNÇÕES AUXILIARES ==========
+
+        function updateOperationSelects() {
+            const pauseSelect = document.getElementById('selectPauseOperation');
+            const addEmployeeSelect = document.getElementById('selectEmployeeOperation');
+            const finishOperationType = document.getElementById('finishOperationType');
+            
+            pauseSelect.innerHTML = '<option value="">Selecione uma operação em andamento</option>';
+            addEmployeeSelect.innerHTML = '<option value="">Selecione uma operação em andamento</option>';
+            finishOperationType.innerHTML = '<option value="">Selecione a operação</option>';
+            
+            Object.keys(activeLoads).forEach(loadId => {
+                const load = activeLoads[loadId];
+                let optionText = `${getOperationTypeName(load.type)} - ${load.employeeCode}`;
+                
+                if (load.doca) optionText += ` - Doca ${load.doca}`;
+                if (load.destino) optionText += ` - ${load.destino}`;
+                if (load.shipmentNumber) optionText += ` - ${load.shipmentNumber}`;
+                
+                const option = document.createElement('option');
+                option.value = loadId;
+                option.textContent = optionText;
+                
+                pauseSelect.appendChild(option.cloneNode(true));
+                addEmployeeSelect.appendChild(option.cloneNode(true));
+                
+                const finishOption = document.createElement('option');
+                finishOption.value = loadId;
+                finishOption.textContent = optionText;
+                finishOperationType.appendChild(finishOption);
+            });
+        }
+
+        function updateLoadDisplay(loadId, loadData) {
+            let loadElement = document.getElementById(`load-${loadId}`);
+            
+            if (!loadElement) {
+                loadElement = document.createElement('div');
+                loadElement.id = `load-${loadId}`;
+                loadElement.className = 'load-card';
+                document.getElementById('activeLoadsList').appendChild(loadElement);
+            }
+            
+            const startTime = loadData.startTime.toDate();
+            const now = new Date();
+            const elapsedMs = now - startTime;
+            const elapsedMins = Math.floor(elapsedMs / 60000);
+            
+            let statusClass, statusText;
+            
+            if (loadData.status === 'paused') {
+                statusClass = 'status-paused';
+                statusText = 'Pausado';
+            } else {
+                statusClass = 'status-active';
+                statusText = 'Em andamento';
+            }
+            
+            let detailsHTML = `
+                <div class="load-header">
+                    <div class="load-time">Iniciado: ${formatTime(startTime)}</div>
+                    <div class="load-status ${statusClass}">${statusText}</div>
+                </div>
+                <div>Colaborador: ${loadData.employeeName || loadData.employeeCode}</div>
+                <div>Tipo: ${getOperationTypeName(loadData.type)}</div>
+                <div>Tempo decorrido: ${elapsedMins} min</div>
+            `;
+            
+            if (loadData.endereco) detailsHTML += `<div>Endereço: ${loadData.endereco}</div>`;
+            if (loadData.destino) detailsHTML += `<div>Destino: ${loadData.destino}</div>`;
+            if (loadData.doca) detailsHTML += `<div>Doca: ${loadData.doca}</div>`;
+            if (loadData.surfNumber) detailsHTML += `<div>SURF: ${loadData.surfNumber}</div>`;
+            if (loadData.shipmentNumber) detailsHTML += `<div>Shipment: ${loadData.shipmentNumber}</div>`;
+            if (loadData.destination) detailsHTML += `<div>Destino: ${loadData.destination}</div>`;
+            
+            if (loadData.type === 'carregamento' && loadData.steps) {
+                detailsHTML += `<div class="load-steps">
+                    <h4>Etapas do Carregamento</h4>`;
+                
+                const stepsOrder = ['abertura', 'carregamento', 'fechamento', 'preCinto', 'aguardandoLacre'];
+                
+                stepsOrder.forEach(stepKey => {
+                    const step = loadData.steps[stepKey];
+                    if (!step) return;
+                    
+                    let stepClass = 'load-step-item';
+                    if (step.status === 'completed') stepClass += ' completed';
+                    if (step.status === 'in-progress') stepClass += ' in-progress';
+                    
+                    let statusClass = 'status-pending';
+                    if (step.status === 'completed') statusClass = 'status-completed';
+                    if (step.status === 'in-progress') statusClass = 'status-in-progress';
+                    
+                    detailsHTML += `
+                        <div class="${stepClass}" data-step="${stepKey}">
+                            <div class="load-step-status ${statusClass}">${stepsOrder.indexOf(stepKey) + 1}</div>
+                            <div class="load-step-info">
+                                <strong>${getStepName(stepKey)}</strong>
+                                <div class="load-step-time">${formatStepTime(step)}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                const currentStepIndex = stepsOrder.indexOf(loadData.currentStep);
+                
+                if (currentStepIndex < stepsOrder.length - 1 && loadData.status === 'active') {
+                    detailsHTML += `<button class="next-step-btn" onclick="showNextStepModal('${loadId}')">Próxima Etapa</button>`;
+                }
+                
+                if (loadData.currentStep === 'aguardandoLacre' && loadData.status === 'active') {
+                    detailsHTML += `<button class="finish-step-btn" onclick="showFinishLacreModal('${loadId}')">Finalizar Aguardando Lacre</button>`;
+                }
+                
+                detailsHTML += `</div>`;
+            }
+            
+            loadElement.innerHTML = detailsHTML;
+            
+            updateStepTimes(loadId, loadData);
+            
+            if (loadIntervals[loadId]) {
+                clearInterval(loadIntervals[loadId]);
+            }
+            
+            loadIntervals[loadId] = setInterval(() => {
+                updateStepTimes(loadId, loadData);
+            }, 1000);
+        }
+
+        function removeLoadDisplay(loadId) {
+            const loadElement = document.getElementById(`load-${loadId}`);
+            if (loadElement) {
+                loadElement.remove();
+            }
+            
+            if (loadIntervals[loadId]) {
+                clearInterval(loadIntervals[loadId]);
+                delete loadIntervals[loadId];
+            }
+        }
+
+        function getOperationTypeName(type) {
+            const types = {
+                'simulacao': 'Simulação',
+                'enderecamento': 'Endereçamento',
+                'shipment': 'Shipment',
+                'carregamento': 'Carregamento de Carga'
+            };
+            return types[type] || type;
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                day: '2-digit',
+                month: '2-digit'
+            });
+        }
+
+        function resetOperationForm() {
+            document.getElementById('employeeCode').value = '';
+            document.getElementById('operationType').selectedIndex = 0;
+            document.getElementById('additionalLoaders').innerHTML = '';
+            document.querySelectorAll('.operation-specific-fields').forEach(field => {
+                field.style.display = 'none';
+                const inputs = field.querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    if (input.type !== 'button') {
+                        input.value = '';
+                    }
+                });
+            });
+        }
+
+        function resetFinishForm() {
+            document.getElementById('finishEmployeeCode').value = '';
+            document.getElementById('materialMix').value = '';
+            document.getElementById('tonsLoaded').value = '';
+            document.getElementById('observation').value = '';
+            document.getElementById('finishOperationType').selectedIndex = 0;
+            document.getElementById('allowReopen').checked = false;
+        }
+
+        function resetPauseForm() {
+            document.getElementById('pauseEmployeeCode').value = '';
+            document.getElementById('selectPauseOperation').selectedIndex = 0;
+            document.getElementById('pauseAction').selectedIndex = 0;
+            document.getElementById('pauseReasonContainer').style.display = 'none';
+        }
+
+        function resetReopenForm() {
+            document.getElementById('reopenEmployeeCode').value = '';
+            document.getElementById('selectReopenOperation').selectedIndex = 0;
+            document.getElementById('reopenReason').value = '';
+        }
+
+        // ========== FUNÇÕES DAS ETAPAS DO CARREGAMENTO ==========
+
+        function showNextStepModal(operationId) {
+            const operation = activeLoads[operationId];
+            if (!operation || operation.type !== 'carregamento') return;
+            
+            currentOperationForNextStep = operationId;
+            
+            const stepsOrder = ['abertura', 'carregamento', 'fechamento', 'preCinto', 'aguardandoLacre'];
+            const currentStepIndex = stepsOrder.indexOf(operation.currentStep);
+            const nextStepIndex = currentStepIndex + 1;
+            
+            if (nextStepIndex >= stepsOrder.length) {
+                alert('Todas as etapas já foram concluídas!');
+                return;
+            }
+            
+            const nextStep = stepsOrder[nextStepIndex];
+            const nextStepName = getStepName(nextStep);
+            
+            document.getElementById('nextStepInfo').innerHTML = `
+                <p><strong>Operação:</strong> ${operation.employeeName || operation.employeeCode}</p>
+                <p><strong>Etapa Atual:</strong> ${getStepName(operation.currentStep)}</p>
+                <p><strong>Próxima Etapa:</strong> ${nextStepName}</p>
+            `;
+            
+            document.getElementById('nextStepEmployeeCode').value = '';
+            document.getElementById('nextStepModal').style.display = 'flex';
+        }
+
+        function showFinishLacreModal(operationId) {
+            const operation = activeLoads[operationId];
+            if (!operation || operation.type !== 'carregamento') return;
+            
+            currentOperationForFinishLacre = operationId;
+            
+            document.getElementById('finishLacreInfo').innerHTML = `
+                <p><strong>Operação:</strong> ${operation.employeeName || operation.employeeCode}</p>
+                <p><strong>Etapa a Finalizar:</strong> Aguardando Lacre</p>
+                <p><strong>Tempo na etapa:</strong> ${formatStepTime(operation.steps.aguardandoLacre)}</p>
+            `;
+            
+            document.getElementById('finishLacreEmployeeCode').value = '';
+            document.getElementById('finishLacreModal').style.display = 'flex';
+        }
+
+        function confirmNextStep() {
+            const employeeCode = document.getElementById('nextStepEmployeeCode').value;
+            
+            if (!employeeCode || !currentOperationForNextStep) {
+                alert('Por favor, preencha o código do funcionário');
+                return;
+            }
+            
+            const operation = activeLoads[currentOperationForNextStep];
+            if (!operation || (operation.employeeCode !== employeeCode && 
+                (!operation.additionalLoaders || !operation.additionalLoaders.includes(employeeCode)))) {
+                alert('Este funcionário não pertence à operação selecionada');
+                return;
+            }
+            
+            const stepsOrder = ['abertura', 'carregamento', 'fechamento', 'preCinto', 'aguardandoLacre'];
+            const currentStepIndex = stepsOrder.indexOf(operation.currentStep);
+            const nextStepIndex = currentStepIndex + 1;
+            
+            if (nextStepIndex >= stepsOrder.length) {
+                alert('Todas as etapas já foram concluídas!');
+                return;
+            }
+            
+            const currentStep = operation.currentStep;
+            const nextStep = stepsOrder[nextStepIndex];
+            const now = new Date();
+            
+            const finishCurrentStep = {};
+            finishCurrentStep[`steps.${currentStep}.status`] = 'completed';
+            finishCurrentStep[`steps.${currentStep}.endTime`] = now;
+            
+            db.collection('operations').doc(currentOperationForNextStep).update(finishCurrentStep)
+            .then(() => {
+                const startNextStep = {};
+                startNextStep['currentStep'] = nextStep;
+                startNextStep[`steps.${nextStep}.status`] = 'in-progress';
+                startNextStep[`steps.${nextStep}.startTime`] = now;
+                
+                return db.collection('operations').doc(currentOperationForNextStep).update(startNextStep);
+            })
+            .then(() => {
+                alert(`Etapa ${getStepName(currentStep)} concluída! Iniciando ${getStepName(nextStep)}`);
+                closeModal('nextStepModal');
+                currentOperationForNextStep = null;
+            })
+            .catch((error) => {
+                console.error("Erro ao avançar etapa:", error);
+                alert('Erro ao avançar etapa: ' + error.message);
+            });
+        }
+
+        function confirmFinishLacre() {
+            const employeeCode = document.getElementById('finishLacreEmployeeCode').value;
+            
+            if (!employeeCode || !currentOperationForFinishLacre) {
+                alert('Por favor, preencha o código do funcionário');
+                return;
+            }
+            
+            const operation = activeLoads[currentOperationForFinishLacre];
+            if (!operation || (operation.employeeCode !== employeeCode && 
+                (!operation.additionalLoaders || !operation.additionalLoaders.includes(employeeCode)))) {
+                alert('Este funcionário não pertence à operação selecionada');
+                return;
+            }
+            
+            const now = new Date();
+            
+            db.collection('operations').doc(currentOperationForFinishLacre).update({
+                'steps.aguardandoLacre.status': 'completed',
+                'steps.aguardandoLacre.endTime': now,
+                'currentStep': 'completed'
+            })
+            .then(() => {
+                alert('Etapa "Aguardando Lacre" finalizada com sucesso!');
+                closeModal('finishLacreModal');
+                currentOperationForFinishLacre = null;
+            })
+            .catch((error) => {
+                console.error("Erro ao finalizar etapa do lacre:", error);
+                alert('Erro ao finalizar etapa do lacre: ' + error.message);
+            });
+        }
+
+        function getStepName(stepKey) {
+            const stepNames = {
+                'abertura': 'Abertura do Caminhão',
+                'carregamento': 'Carregamento do Caminhão',
+                'fechamento': 'Fechamento do Caminhão',
+                'preCinto': 'Pré-Cinto',
+                'aguardandoLacre': 'Aguardando Lacre',
+                'completed': 'Concluído'
+            };
+            return stepNames[stepKey] || stepKey;
+        }
+
+        function formatStepTime(step) {
+            if (!step.startTime) return '00:00';
+            
+            const startTime = step.startTime.toDate();
+            const endTime = step.endTime ? step.endTime.toDate() : new Date();
+            
+            if (step.status === 'in-progress') {
+                const duration = Math.floor((endTime - startTime) / 1000);
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else if (step.status === 'completed' && step.endTime) {
+                const duration = Math.floor((step.endTime.toDate() - startTime) / 1000);
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            return '00:00';
+        }
+
+        function updateStepTimes(operationId, loadData) {
+            if (loadData.type !== 'carregamento' || !loadData.steps) return;
+            
+            const steps = loadData.steps;
+            Object.keys(steps).forEach(stepKey => {
+                const step = steps[stepKey];
+                const timeElement = document.querySelector(`#load-${operationId} [data-step="${stepKey}"] .load-step-time`);
+                
+                if (timeElement) {
+                    const currentTime = formatStepTime(step);
+                    timeElement.textContent = currentTime;
+                }
+            });
+        }
+
+        // ========== FUNÇÕES DO SCANNER ==========
+
+        function startScanner(inputId) {
+            currentScannerInput = document.getElementById(inputId);
+            document.getElementById('scanner-container').style.display = 'flex';
+            scannerActive = true;
+            document.getElementById('scan-result').style.display = 'none';
+
+            if (!canvas) {
+                canvas = document.createElement('canvas');
+                canvasContext = canvas.getContext('2d');
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function(s) {
+                    stream = s;
+                    const video = document.getElementById('scanner-video');
+                    video.srcObject = stream;
+                    video.play();
+                    scanningInterval = requestAnimationFrame(tick);
+                })
+                .catch(function(err) {
+                    console.error("Erro ao acessar a câmera:", err);
+                    alert("Não foi possível acessar a câmera. Verifique as permissões.");
+                    stopScanner();
+                });
+        }
+
+        function stopScanner() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            if (scanningInterval) {
+                cancelAnimationFrame(scanningInterval);
+                scanningInterval = null;
+            }
+            
+            scannerActive = false;
+            document.getElementById('scanner-container').style.display = 'none';
+            currentScannerInput = null;
+        }
+
+        function tick() {
+            if (!scannerActive) return;
+            
+            const video = document.getElementById('scanner-video');
+            if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+                scanningInterval = requestAnimationFrame(tick);
+                return;
+            }
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "dontInvert",
+            });
+
+            if (code) {
+                document.getElementById('scan-result').textContent = `Código detectado: ${code.data}`;
+                document.getElementById('scan-result').style.display = 'block';
+
+                if (currentScannerInput) {
+                    currentScannerInput.value = code.data;
+                    
+                    if (currentScannerInput.id === 'employeeCode' || 
+                        currentScannerInput.id === 'finishEmployeeCode' ||
+                        currentScannerInput.id === 'pauseEmployeeCode' ||
+                        currentScannerInput.id === 'newEmployeeCode' ||
+                        currentScannerInput.id === 'nextStepEmployeeCode' ||
+                        currentScannerInput.id === 'finishLacreEmployeeCode' ||
+                        currentScannerInput.id === 'reopenEmployeeCode') {
+                        checkEmployeeExists(code.data);
+                    }
+                }
+
+                setTimeout(stopScanner, 1500);
+                return;
+            }
+
+            scanningInterval = requestAnimationFrame(tick);
+        }
+
+        // ========== FUNÇÕES DE COLABORADORES ==========
+
+        function checkEmployeeExists(employeeCode) {
+            return new Promise((resolve, reject) => {
+                db.collection('colaboradores')
+                    .where('codigo', '==', employeeCode)
+                    .get()
+                    .then((snapshot) => {
+                        if (snapshot.empty) {
+                            document.getElementById('employeeId').value = employeeCode;
+                            document.getElementById('employeeModal').style.display = 'flex';
+                            reject(new Error('Colaborador não encontrado'));
+                        } else {
+                            const employeeData = snapshot.docs[0].data();
+                            resolve(employeeData.nome || '');
+                        }
+                    })
+                    .catch(reject);
+            });
+        }
+
+        function saveEmployee() {
+            const employeeCode = document.getElementById('employeeId').value;
+            const employeeName = document.getElementById('employeeName').value;
+            
+            if (!employeeName) {
+                alert('Por favor, informe o nome do colaborador');
+                return;
+            }
+            
+            db.collection('colaboradores').add({
+                codigo: employeeCode,
+                nome: employeeName,
+                unidade: currentUnit,
+                dataCadastro: new Date()
+            })
+            .then(() => {
+                alert('Colaborador cadastrado com sucesso!');
+                closeModal('employeeModal');
+                if (currentScannerInput) {
+                    currentScannerInput.value = employeeCode;
+                }
+            })
+            .catch(console.error);
+        }
+
+        function addAdditionalLoader() {
+            const container = document.getElementById('additionalLoaders');
+            const loaderCount = container.querySelectorAll('.additional-loader').length + 1;
+            const loaderId = `loader${loaderCount}`;
+            
+            const loaderDiv = document.createElement('div');
+            loaderDiv.className = 'additional-loader';
+            loaderDiv.innerHTML = `
+                <div class="form-group">
+                    <label for="${loaderId}">Código do Funcionário Adicional ${loaderCount}</label>
+                    <input type="text" id="${loaderId}" placeholder="Ex: GZL-EO-1234">
+                    <button class="qr-button" data-target="${loaderId}">Ler QR Code</button>
+                </div>
+                <button class="remove-loader" data-target="${loaderId}">Remover</button>
+            `;
+            
+            container.appendChild(loaderDiv);
+            
+            const qrButton = loaderDiv.querySelector('.qr-button');
+            qrButton.addEventListener('click', () => {
+                const inputField = document.getElementById(loaderId);
+                startScanner(inputField);
+            });
+            
+            const removeButton = loaderDiv.querySelector('.remove-loader');
+            removeButton.addEventListener('click', () => {
+                loaderDiv.remove();
+            });
+        }
+
+        function updateEmployeeList() {
+            const selectOperation = document.getElementById('selectEmployeeOperation');
+            const employeeList = document.getElementById('currentEmployees');
+            
+            if (!selectOperation.value) {
+                employeeList.innerHTML = '<p>Selecione uma operação para ver os funcionários</p>';
+                return;
+            }
+            
+            const operationId = selectOperation.value;
+            const operation = activeLoads[operationId];
+            
+            if (!operation) {
+                employeeList.innerHTML = '<p>Operação não encontrada</p>';
+                return;
+            }
+            
+            let html = `<p>Funcionários atuais na operação:</p>`;
+            
+            html += `
+                <div class="employee-item">
+                    <span>${operation.employeeName || operation.employeeCode} (Principal)</span>
+                    <input type="radio" name="selectedEmployee" value="${operation.employeeCode}" data-type="principal">
+                </div>
+            `;
+            
+            if (operation.additionalLoaders && operation.additionalLoaders.length > 0) {
+                operation.additionalLoaders.forEach(loader => {
+                    html += `
+                        <div class="employee-item">
+                            <span>${loader}</span>
+                            <input type="radio" name="selectedEmployee" value="${loader}" data-type="additional">
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<p>Nenhum funcionário adicional</p>';
+            }
+            
+            employeeList.innerHTML = html;
+            
+            const radioButtons = employeeList.querySelectorAll('input[type="radio"]');
+            radioButtons.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    selectedEmployeeToRemove = {
+                        code: this.value,
+                        type: this.getAttribute('data-type'),
+                        operationId: operationId
+                    };
+                });
+            });
+        }
+
+        function addEmployeeToOperation() {
+            const employeeCode = document.getElementById('newEmployeeCode').value;
+            const operationId = document.getElementById('selectEmployeeOperation').value;
+            
+            if (!employeeCode || !operationId) {
+                alert('Por favor, preencha todos os campos obrigatórios');
+                return;
+            }
+            
+            const operationRef = db.collection('operations').doc(operationId);
+            
+            db.runTransaction((transaction) => {
+                return transaction.get(operationRef).then((doc) => {
+                    if (!doc.exists) {
+                        throw new Error("Documento não existe!");
+                    }
+                    
+                    const data = doc.data();
+                    const additionalLoaders = data.additionalLoaders || [];
+                    
+                    if (data.employeeCode === employeeCode || additionalLoaders.includes(employeeCode)) {
+                        throw new Error("Este funcionário já está nesta operação!");
+                    }
+                    
+                    additionalLoaders.push(employeeCode);
+                    
+                    transaction.update(operationRef, {
+                        additionalLoaders: additionalLoaders
+                    });
+                });
+            }).then(() => {
+                alert('Funcionário adicionado com sucesso!');
+                document.getElementById('newEmployeeCode').value = '';
+                updateEmployeeList();
+            }).catch((error) => {
+                console.error("Erro ao adicionar funcionário:", error);
+                alert('Erro ao adicionar funcionário: ' + error.message);
+            });
+        }
+
+        function removeEmployeeFromOperation() {
+            if (!selectedEmployeeToRemove) {
+                alert('Por favor, selecione um funcionário para remover');
+                return;
+            }
+            
+            if (!confirm(`Tem certeza que deseja remover o funcionário ${selectedEmployeeToRemove.code} desta operação?`)) {
+                return;
+            }
+            
+            const operationRef = db.collection('operations').doc(selectedEmployeeToRemove.operationId);
+            
+            if (selectedEmployeeToRemove.type === 'principal') {
+                alert('Não é possível remover o funcionário principal da operação.');
+                return;
+            }
+            
+            db.runTransaction((transaction) => {
+                return transaction.get(operationRef).then((doc) => {
+                    if (!doc.exists) {
+                        throw new Error("Documento não existe!");
+                    }
+                    
+                    const data = doc.data();
+                    const updatedAdditionalLoaders = data.additionalLoaders ? 
+                        data.additionalLoaders.filter(l => l !== selectedEmployeeToRemove.code) : [];
+                    
+                    transaction.update(operationRef, {
+                        additionalLoaders: updatedAdditionalLoaders
+                    });
+                });
+            }).then(() => {
+                alert('Funcionário removido com sucesso!');
+                selectedEmployeeToRemove = null;
+                updateEmployeeList();
+            }).catch((error) => {
+                console.error("Erro ao remover funcionário:", error);
+                alert('Erro ao remover funcionário: ' + error.message);
+            });
+        }
+
+        function loadAvailableShipments() {
+            db.collection('operations')
+                .where('unit', '==', currentUnit)
+                .where('type', '==', 'shipment')
+                .where('status', '==', 'completed')
+                .get()
+                .then((shipmentSnapshot) => {
+                    const select = document.getElementById('carregamentoShipment');
+                    select.innerHTML = '<option value="">Selecione um shipment</option>';
+                    
+                    if (shipmentSnapshot.empty) {
+                        select.innerHTML += '<option value="" disabled>Nenhum shipment finalizado disponível</option>';
+                        return;
+                    }
+                    
+                    db.collection('operations')
+                        .where('unit', '==', currentUnit)
+                        .where('type', '==', 'carregamento')
+                        .get()
+                        .then((carregamentoSnapshot) => {
+                            const shipmentsUtilizados = new Set();
+                            carregamentoSnapshot.forEach(doc => {
+                                const carregamento = doc.data();
+                                if (carregamento.shipmentId) {
+                                    shipmentsUtilizados.add(carregamento.shipmentId);
+                                }
+                            });
+                            
+                            let shipmentsDisponiveis = 0;
+                            
+                            shipmentSnapshot.forEach(doc => {
+                                const operation = doc.data();
+                                
+                                if (!shipmentsUtilizados.has(doc.id)) {
+                                    const option = document.createElement('option');
+                                    option.value = doc.id;
+                                    option.textContent = `Shipment: ${operation.shipmentNumber} - ${operation.destination}`;
+                                    select.appendChild(option);
+                                    shipmentsDisponiveis++;
+                                }
+                            });
+                            
+                            if (shipmentsDisponiveis === 0) {
+                                select.innerHTML = '<option value="">Selecione um shipment</option>';
+                                select.innerHTML += '<option value="" disabled>Nenhum shipment disponível (todos já utilizados)</option>';
+                            }
+                        })
+                        .catch(console.error);
+                })
+                .catch(console.error);
+        }
+
+        function logout() {
+            if (confirm('Tem certeza que deseja sair do sistema?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                }).catch(console.error);
+            }
+        }
+
+        // Fechar modal clicando fora dele
+        window.addEventListener('click', (event) => {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

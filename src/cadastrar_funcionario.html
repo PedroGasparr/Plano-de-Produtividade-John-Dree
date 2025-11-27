@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Funcionário - Sistema de Operação</title>
+    <!-- Importar Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <!-- Biblioteca para geração de QR Code -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <!-- Biblioteca para geração de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="../css/cadastrar_funcionario.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span>Prod</span>Plan
+            </div>
+            
+            <ul class="nav-links">
+                <li><a href="operacao.html">Operação</a></li>
+                <li><a href="cadastrar_funcionario.html" class="active">Cadastrar Funcionário</a></li>
+                <li><a href="buscar_funcionario.html">Buscar Funcionário</a></li>
+                <li><a href="ranking.html">Ranking</a></li>
+                <li><a href="painel_controle.html">Painel de Controle</a></li>
+                <li><a href="zles001.html">zles001</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+            </ul>
+            
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-name">Carregando...</div>
+                    <div class="user-role"></div>
+                </div>
+                <button class="logout-btn">Sair</button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="content">
+        <h1 class="page-title">Cadastrar Funcionário</h1>
+        
+        <div class="user-unit-info" id="userUnitInfo">
+            Carregando informações da unidade...
+        </div>
+        
+        <div class="success-message" id="successMessage">
+            Funcionário cadastrado com sucesso! Faça o download do QR Code abaixo.
+        </div>
+        
+        <div class="error-message" id="errorMessage">
+            Ocorreu um erro ao cadastrar o funcionário. Verifique os dados e tente novamente.
+        </div>
+        
+        <div class="form-container">
+            <form id="employeeForm">
+                <div class="form-group">
+                    <label for="employeeName">Nome Completo do Funcionário</label>
+                    <input type="text" id="employeeName" placeholder="Digite o nome completo" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="employeeCode">Código do Funcionário</label>
+                    <input type="text" id="employeeCode" placeholder="Ex: GZL-EO-1234" required>
+                    <small>Formato: SIGLAUNIDADE-EO-NÚMERO (Ex: GZL-EO-1234)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="employeeUnit">Unidade</label>
+                    <input type="text" id="employeeUnit" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="employeeRole">Cargo/Função</label>
+                    <select id="employeeRole" required>
+                        <option value="">Selecione o cargo</option>
+                        <option value="carregador">Carregador</option>
+                        <option value="motorista">Motorista</option>
+                        <option value="separador">Separador</option>
+                        <option value="auxiliar">Auxiliar</option>
+                        <option value="supervisor">Supervisor</option>
+                        <option value="gerente">Gerente</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="employeeStatus">Status</label>
+                    <select id="employeeStatus" required>
+                        <option value="ativo">Ativo</option>
+                        <option value="inativo">Inativo</option>
+                        <option value="ferias">Férias</option>
+                        <option value="afastado">Afastado</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="submit-button">Cadastrar Funcionário</button>
+            </form>
+        </div>
+        
+        <div class="qr-preview" id="qrPreview">
+            <h3>QR Code do Funcionário</h3>
+            <div id="qrcode"></div>
+            <p>Escaneie este QR Code para registrar a presença do funcionário</p>
+            <button class="download-btn" id="downloadBtn">Baixar QR Code em PDF</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMu17OV-5ST1rlg00zbpt6Hv37GKqkX4A",
+            authDomain: "projetos-d868d.firebaseapp.com",
+            databaseURL: "https://projetos-d868d-default-rtdb.firebaseio.com",
+            projectId: "projetos-d868d",
+            storageBucket: "projetos-d868d.firebasestorage.app",
+            messagingSenderId: "420029352781",
+            appId: "1:420029352781:web:05176699348e0ccdd78504",
+            measurementId: "G-FXWXRX04WF"
+        };
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // Elementos da interface
+        const userUnitInfo = document.getElementById('userUnitInfo');
+        const userNameElement = document.querySelector('.user-name');
+        const employeeForm = document.getElementById('employeeForm');
+        const employeeUnitInput = document.getElementById('employeeUnit');
+        const qrPreview = document.getElementById('qrPreview');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const successMessage = document.getElementById('successMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // Estado da aplicação
+        let currentUser = null;
+        let userData = null;
+        let currentUnit = '';
+        let currentEmployeeCode = '';
+        let currentEmployeeData = null;
+        
+        // Verificar autenticação
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                userNameElement.textContent = 'Carregando...';
+                
+                // Buscar dados do usuário no Firestore
+                db.collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        userData = doc.data();
+                        userNameElement.textContent = userData.name;
+                        currentUnit = userData.unit;
+                        userUnitInfo.textContent = `Unidade atual: ${currentUnit}`;
+                        employeeUnitInput.value = currentUnit;
+                    } else {
+                        console.error("Documento do usuário não encontrado");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Erro ao buscar dados do usuário:", error);
+                });
+            } else {
+                // Usuário não autenticado, redirecionar para login
+                window.location.href = 'login.html';
+            }
+        });
+        
+        // Gerar QR Code
+        function generateQRCode(text) {
+            // Limpar QR Code anterior
+            const qrCodeElement = document.getElementById('qrcode');
+            qrCodeElement.innerHTML = '';
+            
+            // Criar canvas para o QR Code
+            const canvas = document.createElement('canvas');
+            qrCodeElement.appendChild(canvas);
+            
+            // Gerar novo QR Code
+            QRCode.toCanvas(canvas, text, {
+                width: 200,
+                margin: 1,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, function(error) {
+                if (error) {
+                    console.error('Erro ao gerar QR Code:', error);
+                    showError('Erro ao gerar QR Code. Tente novamente.');
+                }
+            });
+        }
+        
+        // Gerar PDF com QR Code
+        function generatePDF(employeeData) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Adicionar logo ou título
+            doc.setFontSize(20);
+            doc.setTextColor(40, 40, 40);
+            doc.text('Identificação do Funcionário', 105, 20, { align: 'center' });
+            
+            // Adicionar linha divisória
+            doc.setDrawColor(200, 200, 200);
+            doc.line(20, 25, 190, 25);
+            
+            // Adicionar informações do funcionário
+            doc.setFontSize(12);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Nome: ${employeeData.nome}`, 20, 40);
+            doc.text(`Código: ${employeeData.codigo}`, 20, 50);
+            doc.text(`Unidade: ${employeeData.unidade}`, 20, 60);
+            doc.text(`Cargo: ${employeeData.funcao}`, 20, 70);
+            doc.text(`Status: ${employeeData.status}`, 20, 80);
+            doc.text(`Data de Cadastro: ${new Date().toLocaleDateString('pt-BR')}`, 20, 90);
+            
+            // Adicionar QR Code (convertendo canvas para imagem)
+            const qrCodeCanvas = document.querySelector('#qrcode canvas');
+            if (qrCodeCanvas) {
+                const qrCodeImage = qrCodeCanvas.toDataURL('image/png');
+                doc.addImage(qrCodeImage, 'PNG', 130, 35, 50, 50);
+            }
+            
+            // Adicionar instruções
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Use este QR Code para registrar a presença em operações', 20, 110);
+            doc.text('Este documento deve ser mantido em local visível', 20, 120);
+            
+            // Salvar PDF
+            doc.save(`QRCode_${employeeData.codigo}.pdf`);
+        }
+        
+        // Mostrar mensagem de sucesso
+        function showSuccess() {
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+        
+        // Mostrar mensagem de erro
+        function showError(message) {
+            errorMessage.textContent = message || 'Ocorreu um erro ao cadastrar o funcionário. Verifique os dados e tente novamente.';
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+        
+        // Validar formato do código do funcionário
+        function validateEmployeeCode(code) {
+            // Verificar se o código segue o padrão: SIGLAUNIDADE-EO-NÚMERO
+            const pattern = /^[A-Z]{3}-EO-\d{4,5}$/;
+            return pattern.test(code);
+        }
+        
+        // Gerar código automático baseado na unidade
+        function generateEmployeeCode() {
+            if (!currentUnit) return '';
+            
+            // Obter sigla da unidade (primeiras 3 letras em maiúsculas)
+            const unitPrefix = currentUnit.substring(0, 3).toUpperCase();
+            
+            // Gerar número aleatório de 4 dígitos
+            const randomNumber = Math.floor(1000 + Math.random() * 9000);
+            
+            return `${unitPrefix}-EO-${randomNumber}`;
+        }
+        
+        // Preencher automaticamente o código do funcionário
+        function autoFillEmployeeCode() {
+            const codeInput = document.getElementById('employeeCode');
+            if (!codeInput.value) {
+                codeInput.value = generateEmployeeCode();
+            }
+        }
+        
+        // Evento de envio do formulário
+        employeeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Obter valores do formulário
+            const employeeName = document.getElementById('employeeName').value;
+            const employeeCode = document.getElementById('employeeCode').value;
+            const employeeRole = document.getElementById('employeeRole').value;
+            const employeeStatus = document.getElementById('employeeStatus').value;
+            
+            // Validar código do funcionário
+            if (!validateEmployeeCode(employeeCode)) {
+                showError('Formato do código inválido. Use o formato: SIGLAUNIDADE-EO-NÚMERO (Ex: GZL-EO-1234)');
+                return;
+            }
+            
+            // Verificar se o funcionário já existe
+            db.collection('colaboradores')
+                .where('codigo', '==', employeeCode)
+                .get()
+                .then((snapshot) => {
+                    if (!snapshot.empty) {
+                        showError('Já existe um funcionário com este código.');
+                        return;
+                    }
+                    
+                    // Salvar no Firestore
+                    return db.collection('colaboradores').add({
+                        nome: employeeName,
+                        codigo: employeeCode,
+                        unidade: currentUnit,
+                        funcao: employeeRole,
+                        status: employeeStatus,
+                        dataCadastro: new Date(),
+                        criadoPor: currentUser.uid
+                    });
+                })
+                .then((docRef) => {
+                    // Salvar dados do funcionário para uso posterior
+                    currentEmployeeCode = employeeCode;
+                    currentEmployeeData = {
+                        nome: employeeName,
+                        codigo: employeeCode,
+                        unidade: currentUnit,
+                        funcao: employeeRole,
+                        status: employeeStatus
+                    };
+                    
+                    // Gerar QR Code com o código do funcionário
+                    generateQRCode(employeeCode);
+                    
+                    // Mostrar área de preview do QR Code
+                    qrPreview.style.display = 'block';
+                    
+                    // Mostrar mensagem de sucesso
+                    showSuccess();
+                    
+                    // Rolagem para a área do QR Code
+                    qrPreview.scrollIntoView({ behavior: 'smooth' });
+                    
+                    // Limpar formulário (exceto unidade)
+                    document.getElementById('employeeName').value = '';
+                    document.getElementById('employeeCode').value = '';
+                    document.getElementById('employeeRole').value = '';
+                    document.getElementById('employeeStatus').value = 'ativo';
+                    
+                    // Gerar novo código automático
+                    autoFillEmployeeCode();
+                })
+                .catch((error) => {
+                    console.error("Erro ao cadastrar funcionário:", error);
+                    showError();
+                });
+        });
+        
+        // Evento de download do PDF
+        downloadBtn.addEventListener('click', function() {
+            if (currentEmployeeData) {
+                // Gerar PDF
+                generatePDF(currentEmployeeData);
+            }
+        });
+        
+        // Destacar link ativo na navbar
+        const currentPage = window.location.pathname.split('/').pop();
+        const navLinks = document.querySelectorAll('.nav-links a');
+        
+        navLinks.forEach(link => {
+            const linkPage = link.getAttribute('href');
+            if (currentPage === linkPage) {
+                link.classList.add('active');
+            } else {
+                link.classList.remove('active');
+            }
+        });
+        
+        // Simulação de logout
+        document.querySelector('.logout-btn').addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja sair do sistema?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                }).catch((error) => {
+                    console.error('Erro ao fazer logout:', error);
+                });
+            }
+        });
+        
+        // Inicializar o código do funcionário quando a página carregar
+        window.addEventListener('DOMContentLoaded', function() {
+            // Aguardar um pouco para que a unidade seja carregada
+            setTimeout(autoFillEmployeeCode, 1000);
+        });
+    </script>
+</body>
+</html>

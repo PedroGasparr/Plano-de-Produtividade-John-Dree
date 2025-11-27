@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking - Sistema de Operação</title>
+    <!-- Importar Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <link rel="stylesheet" href="../css/ranking.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span>Prod</span>Plan
+            </div>
+            
+            <ul class="nav-links">
+                <li><a href="operacao.html">Operação</a></li>
+                <li><a href="cadastrar_funcionario.html">Cadastrar Funcionário</a></li>
+                <li><a href="buscar_funcionario.html">Buscar Funcionário</a></li>
+                <li><a href="ranking.html" class="active">Ranking</a></li>
+                <li><a href="painel_controle.html">Painel de Controle</a></li>
+                <li><a href="zles001.html">zles001</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+            </ul>
+            
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-name">Carregando...</div>
+                    <div class="user-role"></div>
+                </div>
+                <button class="logout-btn">Sair</button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="content">
+        <h1 class="page-title">Ranking de Colaboradores</h1>
+        
+        <div class="user-unit-info" id="userUnitInfo">
+            Carregando informações da unidade...
+        </div>
+        
+        <div class="ranking-controls">
+            <div class="filter-group">
+                <label for="periodFilter">Período:</label>
+                <select id="periodFilter" class="filter-select">
+                    <option value="week">Esta semana</option>
+                    <option value="month" selected>Este mês</option>
+                    <option value="quarter">Este trimestre</option>
+                    <option value="year">Este ano</option>
+                    <option value="all">Todos os tempos</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="ranking-tabs">
+            <div class="ranking-tab active" data-tab="productivity">Produtividade (Tempo Médio)</div>
+            <div class="ranking-tab" data-tab="quantity">Quantidade de Carregamentos</div>
+            <div class="ranking-tab" data-tab="tons">Toneladas Carregadas</div>
+        </div>
+        
+        <div class="ranking-container" id="rankingContainer">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMu17OV-5ST1rlg00zbpt6Hv37GKqkX4A",
+            authDomain: "projetos-d868d.firebaseapp.com",
+            databaseURL: "https://projetos-d868d-default-rtdb.firebaseio.com",
+            projectId: "projetos-d868d",
+            storageBucket: "projetos-d868d.firebasestorage.app",
+            messagingSenderId: "420029352781",
+            appId: "1:420029352781:web:05176699348e0ccdd78504",
+            measurementId: "G-FXWXRX04WF"
+        };
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // Elementos da interface
+        const userNameElement = document.querySelector('.user-name');
+        const userUnitInfo = document.getElementById('userUnitInfo');
+        const periodFilter = document.getElementById('periodFilter');
+        const rankingTabs = document.querySelectorAll('.ranking-tab');
+        const rankingContainer = document.getElementById('rankingContainer');
+        
+        // Estado da aplicação
+        let currentUser = null;
+        let userData = null;
+        let currentUnit = '';
+        let currentTab = 'productivity';
+        let employeesData = [];
+        let carregamentosData = [];
+        
+        // Verificar autenticação
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                userNameElement.textContent = 'Carregando...';
+                
+                // Buscar dados do usuário no Firestore
+                db.collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        userData = doc.data();
+                        userNameElement.textContent = userData.name;
+                        currentUnit = userData.unit;
+                        userUnitInfo.textContent = `Unidade atual: ${currentUnit}`;
+                        
+                        // Carregar dados iniciais
+                        loadRankingData();
+                    } else {
+                        console.error("Documento do usuário não encontrado");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Erro ao buscar dados do usuário:", error);
+                });
+            } else {
+                // Usuário não autenticado, redirecionar para login
+                window.location.href = 'login.html';
+            }
+        });
+        
+        // Carregar dados para o ranking
+        function loadRankingData() {
+            showLoading();
+            
+            // Buscar colaboradores da unidade atual
+            db.collection('colaboradores')
+                .where('unidade', '==', currentUnit)
+                .get()
+                .then((querySnapshot) => {
+                    employeesData = [];
+                    querySnapshot.forEach((doc) => {
+                        employeesData.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                    
+                    // Buscar carregamentos da unidade atual
+                    return Promise.all([
+                        // Tentativa 1: Procurar na coleção 'carregamentos'
+                        db.collection('carregamentos')
+                            .where('unidade', '==', currentUnit)
+                            .get()
+                            .catch(error => {
+                                return { empty: true, forEach: () => {} };
+                            }),
+                            
+                        // Tentativa 2: Procurar na coleção 'operations'  
+                        db.collection('operations')
+                            .where('unit', '==', currentUnit)
+                            .get()
+                            .catch(error => {
+                                return { empty: true, forEach: () => {} };
+                            })
+                    ]);
+                })
+                .then(([carregamentosSnapshot, operationsSnapshot]) => {
+                    carregamentosData = [];
+                    
+                    // Processar carregamentos da coleção 'carregamentos'
+                    if (!carregamentosSnapshot.empty) {
+                        carregamentosSnapshot.forEach((doc) => {
+                            carregamentosData.push({
+                                id: doc.id,
+                                ...doc.data(),
+                                collection: 'carregamentos'
+                            });
+                        });
+                    }
+                    
+                    // Processar carregamentos da coleção 'operations'
+                    if (!operationsSnapshot.empty) {
+                        operationsSnapshot.forEach((doc) => {
+                            carregamentosData.push({
+                                id: doc.id,
+                                ...doc.data(),
+                                collection: 'operations'
+                            });
+                        });
+                    }
+                    
+                    // Processar dados e exibir ranking
+                    processRankingData();
+                })
+                .catch((error) => {
+                    console.error("Erro ao carregar dados:", error);
+                    showError('Erro ao carregar dados do ranking.');
+                });
+        }
+        
+        // Processar dados para o ranking
+        function processRankingData() {
+            const selectedPeriod = periodFilter.value;
+            
+            // Objeto para armazenar estatísticas por colaborador
+            const employeeStats = {};
+            
+            // Inicializar estatísticas para todos os colaboradores
+            employeesData.forEach(employee => {
+                employeeStats[employee.codigo] = {
+                    id: employee.id,
+                    nome: employee.nome,
+                    codigo: employee.codigo,
+                    funcao: employee.funcao,
+                    fotoBase64: employee.fotoBase64,
+                    totalCarregamentos: 0,
+                    totalTempo: 0,
+                    totalTons: 0
+                };
+            });
+            
+            // Processar cada carregamento
+            carregamentosData.forEach(carregamento => {
+                // Verificar se está dentro do período selecionado
+                if (selectedPeriod !== 'all') {
+                    const carregamentoDate = carregamento.createdAt ? carregamento.createdAt.toDate() : new Date();
+                    const now = new Date();
+                    let startDate;
+                    
+                    switch (selectedPeriod) {
+                        case 'week':
+                            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+                            break;
+                        case 'month':
+                            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                            break;
+                        case 'quarter':
+                            const quarter = Math.floor(now.getMonth() / 3);
+                            startDate = new Date(now.getFullYear(), quarter * 3, 1);
+                            break;
+                        case 'year':
+                            startDate = new Date(now.getFullYear(), 0, 1);
+                            break;
+                    }
+                    
+                    if (startDate && carregamentoDate < startDate) {
+                        return; // Pular carregamentos fora do período
+                    }
+                }
+                
+                // Calcular tempo do carregamento em minutos
+                let tempoMinutos = 0;
+                if (carregamento.startTime && carregamento.endTime) {
+                    const start = carregamento.startTime.toDate();
+                    const end = carregamento.endTime.toDate();
+                    tempoMinutos = (end - start) / (1000 * 60);
+                    
+                    // Subtrair o tempo pausado, se disponível
+                    if (carregamento.totalPausedTime) {
+                        tempoMinutos -= (carregamento.totalPausedTime / 1000 / 60);
+                    }
+                }
+                
+                // Obter toneladas carregadas (usar 0 se não disponível)
+                const tonsLoaded = carregamento.tonsLoaded || 0;
+                
+                // Processar carregador principal
+                const mainLoaderCode = carregamento.employeeCode;
+                if (mainLoaderCode && employeeStats[mainLoaderCode]) {
+                    employeeStats[mainLoaderCode].totalCarregamentos += 1;
+                    employeeStats[mainLoaderCode].totalTempo += tempoMinutos;
+                    employeeStats[mainLoaderCode].totalTons += tonsLoaded;
+                }
+                
+                // Processar carregadores adicionais, se existirem
+                if (carregamento.additionalLoaders && Array.isArray(carregamento.additionalLoaders)) {
+                    carregamento.additionalLoaders.forEach(loaderCode => {
+                        if (employeeStats[loaderCode]) {
+                            // Distribuir as métricas igualmente entre os carregadores
+                            const numLoaders = 1 + carregamento.additionalLoaders.length; // Principal + adicionais
+                            
+                            employeeStats[loaderCode].totalCarregamentos += 1;
+                            employeeStats[loaderCode].totalTempo += (tempoMinutos / numLoaders);
+                            employeeStats[loaderCode].totalTons += (tonsLoaded / numLoaders);
+                        }
+                    });
+                }
+            });
+            
+            // Converter o objeto de estatísticas em array e calcular médias
+            const employeesWithStats = Object.values(employeeStats).map(emp => {
+                return {
+                    ...emp,
+                    tempoMedio: emp.totalCarregamentos > 0 ? Math.round(emp.totalTempo / emp.totalCarregamentos) : 0,
+                    tonsMedia: emp.totalCarregamentos > 0 ? (emp.totalTons / emp.totalCarregamentos).toFixed(2) : 0
+                };
+            });
+            
+            // Ordenar conforme a aba selecionada
+            let sortedEmployees;
+            if (currentTab === 'productivity') {
+                // Ordenar por tempo médio (menor tempo primeiro)
+                sortedEmployees = employeesWithStats
+                    .filter(emp => emp.totalCarregamentos > 0)
+                    .sort((a, b) => a.tempoMedio - b.tempoMedio);
+            } else if (currentTab === 'quantity') {
+                // Ordenar por quantidade de carregamentos
+                sortedEmployees = employeesWithStats
+                    .filter(emp => emp.totalCarregamentos > 0)
+                    .sort((a, b) => b.totalCarregamentos - a.totalCarregamentos);
+            } else if (currentTab === 'tons') {
+                // Ordenar por toneladas carregadas
+                sortedEmployees = employeesWithStats
+                    .filter(emp => emp.totalCarregamentos > 0)
+                    .sort((a, b) => b.totalTons - a.totalTons);
+            }
+            
+            // Exibir apenas os top 5
+            displayRanking(sortedEmployees.slice(0, 5));
+        }
+        
+        // Exibir ranking na interface
+        function displayRanking(employees) {
+            rankingContainer.innerHTML = '';
+            
+            if (employees.length === 0) {
+                rankingContainer.innerHTML = `
+                    <div class="no-data">
+                        Nenhum dado disponível para o ranking no período selecionado.
+                        <p>Verifique se existem carregamentos registrados para os colaboradores desta unidade.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            employees.forEach((employee, index) => {
+                const position = index + 1;
+                
+                const card = document.createElement('div');
+                card.className = 'ranking-card';
+                
+                // Determinar qual estatística mostrar com base na aba atual
+                let statValue, statLabel;
+                if (currentTab === 'productivity') {
+                    statValue = employee.tempoMedio;
+                    statLabel = 'Minutos (média)';
+                } else if (currentTab === 'quantity') {
+                    statValue = employee.totalCarregamentos;
+                    statLabel = 'Carregamentos';
+                } else if (currentTab === 'tons') {
+                    statValue = employee.totalTons.toFixed(1);
+                    statLabel = 'Toneladas';
+                }
+                
+                card.innerHTML = `
+                    <div class="ranking-badge ranking-badge-${position}">${position}</div>
+                    <div class="employee-header">
+                        ${position <= 3 && employee.fotoBase64 ? 
+                            `<img src="${employee.fotoBase64}" alt="Foto de ${employee.nome}" class="employee-photo">` : 
+                            `<div class="employee-photo" style="background-color: #ddd; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 1.5rem;">👤</span>
+                            </div>`
+                        }
+                        <div class="employee-info">
+                            <h3 class="employee-name">${employee.nome}</h3>
+                            <p class="employee-detail">${employee.codigo}</p>
+                            <p class="employee-detail">${employee.funcao}</p>
+                        </div>
+                    </div>
+                    <div class="ranking-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">${employee.totalCarregamentos}</div>
+                            <div class="stat-label">Carregamentos</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${statValue}</div>
+                            <div class="stat-label">${statLabel}</div>
+                        </div>
+                    </div>
+                `;
+                
+                rankingContainer.appendChild(card);
+            });
+        }
+        
+        // Mostrar loading
+        function showLoading() {
+            rankingContainer.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                </div>
+            `;
+        }
+        
+        // Mostrar erro
+        function showError(message) {
+            rankingContainer.innerHTML = `
+                <div class="no-data">
+                    ${message}
+                </div>
+            `;
+        }
+        
+        // Event Listeners
+        periodFilter.addEventListener('change', () => {
+            processRankingData();
+        });
+        
+        rankingTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Ativar aba clicada
+                rankingTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Atualizar aba atual
+                currentTab = tab.getAttribute('data-tab');
+                
+                // Processar dados novamente
+                processRankingData();
+            });
+        });
+        
+        // Destacar link ativo na navbar
+        const currentPage = window.location.pathname.split('/').pop();
+        const navLinks = document.querySelectorAll('.nav-links a');
+        
+        navLinks.forEach(link => {
+            const linkPage = link.getAttribute('href');
+            if (currentPage === linkPage) {
+                link.classList.add('active');
+            } else {
+                link.classList.remove('active');
+            }
+        });
+        
+        // Simulação de logout
+        document.querySelector('.logout-btn').addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja sair do sistema?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                }).catch((error) => {
+                    console.error('Erro ao fazer logout:', error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

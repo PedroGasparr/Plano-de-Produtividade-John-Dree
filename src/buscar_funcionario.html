@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscar Funcionário - Sistema de Operação</title>
+    <!-- Importar Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <!-- Biblioteca para geração de QR Code -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <!-- Biblioteca para geração de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="../css/buscar_funcionario.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span>Prod</span>Plan
+            </div>
+            
+            <ul class="nav-links">
+                <li><a href="operacao.html">Operação</a></li>
+                <li><a href="cadastrar_funcionario.html">Cadastrar Funcionário</a></li>
+                <li><a href="buscar_funcionario.html" class="active">Buscar Funcionário</a></li>
+                <li><a href="ranking.html">Ranking</a></li>
+                <li><a href="painel_controle.html">Painel de Controle</a></li>
+                <li><a href="zles001.html">zles001</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+            </ul>
+            
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-name">Carregando...</div>
+                    <div class="user-role"></div>
+                </div>
+                <button class="logout-btn">Sair</button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="content">
+        <h1 class="page-title">Buscar Funcionário</h1>
+        
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-input" placeholder="Digite o nome ou código do funcionário">
+            <button id="searchButton" class="search-button">Buscar</button>
+        </div>
+        
+        <div class="success-message" id="successMessage"></div>
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Carregando...</p>
+        </div>
+        
+        <div class="no-results" id="noResults">
+            Nenhum funcionário encontrado com os critérios de busca.
+        </div>
+        
+        <div class="employee-card" id="employeeCard">
+            <div class="employee-header">
+                <img src="https://via.placeholder.com/120" alt="Foto do Funcionário" class="employee-photo" id="employeePhoto">
+                <div class="employee-info">
+                    <h2 class="employee-name" id="employeeName">Nome do Funcionário</h2>
+                    <p class="employee-detail" id="employeeCode">Código: </p>
+                    <p class="employee-detail" id="employeeUnit">Unidade: </p>
+                    <p class="employee-detail" id="employeeRole">Cargo: </p>
+                    <p class="employee-detail" id="employeeStatus">Status: </p>
+                    <p class="employee-detail" id="employeeDate">Data de Cadastro: </p>
+                </div>
+            </div>
+            
+            <div class="employee-actions">
+                <button class="action-btn download-btn" id="downloadBtn">Baixar QR Code em PDF</button>
+                <button class="action-btn upload-btn" id="uploadPhotoBtn">Enviar Foto</button>
+                <button class="action-btn delete-btn" id="deleteBtn">Excluir Funcionário</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para upload de foto -->
+    <div class="modal" id="photoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Enviar Foto do Funcionário</h2>
+                <span class="close-btn" id="closeModal">&times;</span>
+            </div>
+            <input type="file" id="photoInput" class="file-input" accept="image/*">
+            <img id="previewImage" class="preview-image" src="" alt="Preview">
+            <div class="modal-actions">
+                <button class="cancel-btn" id="cancelUpload">Cancelar</button>
+                <button class="save-btn" id="savePhoto">Salvar Foto</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMu17OV-5ST1rlg00zbpt6Hv37GKqkX4A",
+            authDomain: "projetos-d868d.firebaseapp.com",
+            databaseURL: "https://projetos-d868d-default-rtdb.firebaseio.com",
+            projectId: "projetos-d868d",
+            storageBucket: "projetos-d868d.firebasestorage.app",
+            messagingSenderId: "420029352781",
+            appId: "1:420029352781:web:05176699348e0ccdd78504",
+            measurementId: "G-FXWXRX04WF"
+        };
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // Elementos da interface
+        const userNameElement = document.querySelector('.user-name');
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const employeeCard = document.getElementById('employeeCard');
+        const noResults = document.getElementById('noResults');
+        const successMessage = document.getElementById('successMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const loadingElement = document.getElementById('loading');
+        
+        // Elementos do card do funcionário
+        const employeePhoto = document.getElementById('employeePhoto');
+        const employeeName = document.getElementById('employeeName');
+        const employeeCode = document.getElementById('employeeCode');
+        const employeeUnit = document.getElementById('employeeUnit');
+        const employeeRole = document.getElementById('employeeRole');
+        const employeeStatus = document.getElementById('employeeStatus');
+        const employeeDate = document.getElementById('employeeDate');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const uploadPhotoBtn = document.getElementById('uploadPhotoBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        
+        // Elementos do modal de foto
+        const photoModal = document.getElementById('photoModal');
+        const photoInput = document.getElementById('photoInput');
+        const previewImage = document.getElementById('previewImage');
+        const closeModal = document.getElementById('closeModal');
+        const cancelUpload = document.getElementById('cancelUpload');
+        const savePhoto = document.getElementById('savePhoto');
+        
+        // Estado da aplicação
+        let currentUser = null;
+        let currentEmployee = null;
+        
+        // Verificar autenticação
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                userNameElement.textContent = 'Carregando...';
+                
+                // Buscar dados do usuário no Firestore
+                db.collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const userData = doc.data();
+                        userNameElement.textContent = userData.name;
+                    } else {
+                        console.error("Documento do usuário não encontrado");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Erro ao buscar dados do usuário:", error);
+                });
+            } else {
+                // Usuário não autenticado, redirecionar para login
+                window.location.href = 'login.html';
+            }
+        });
+        
+        // Buscar funcionário
+        function searchEmployee() {
+            const searchTerm = searchInput.value.trim();
+            
+            if (!searchTerm) {
+                showError('Digite um nome ou código para buscar');
+                return;
+            }
+            
+            // Limpar mensagens
+            hideMessages();
+            showLoading();
+            
+            // Buscar por código (mais específico)
+            db.collection('colaboradores')
+                .where('codigo', '==', searchTerm.toUpperCase())
+                .get()
+                .then((querySnapshot) => {
+                    if (!querySnapshot.empty) {
+                        // Encontrou por código
+                        displayEmployee(querySnapshot.docs[0]);
+                        hideLoading();
+                        return;
+                    }
+                    
+                    // Se não encontrou por código, buscar por nome
+                    return db.collection('colaboradores')
+                        .where('nome', '>=', searchTerm)
+                        .where('nome', '<=', searchTerm + '\uf8ff')
+                        .get();
+                })
+                .then((querySnapshot) => {
+                    if (querySnapshot && !querySnapshot.empty) {
+                        // Encontrou por nome
+                        displayEmployee(querySnapshot.docs[0]);
+                    } else if (!currentEmployee) {
+                        // Não encontrou nenhum funcionário
+                        employeeCard.style.display = 'none';
+                        noResults.style.display = 'block';
+                    }
+                    hideLoading();
+                })
+                .catch((error) => {
+                    console.error("Erro ao buscar funcionário:", error);
+                    showError('Erro ao buscar funcionário. Tente novamente.');
+                    hideLoading();
+                });
+        }
+        
+        // Exibir dados do funcionário
+        function displayEmployee(doc) {
+            currentEmployee = {
+                id: doc.id,
+                ...doc.data()
+            };
+            
+            // Preencher os dados no card
+            employeeName.textContent = currentEmployee.nome;
+            employeeCode.textContent = `Código: ${currentEmployee.codigo}`;
+            employeeUnit.textContent = `Unidade: ${currentEmployee.unidade}`;
+            employeeRole.textContent = `Cargo: ${currentEmployee.funcao}`;
+            employeeStatus.textContent = `Status: ${currentEmployee.status}`;
+            
+            // Formatar data
+            const date = currentEmployee.dataCadastro.toDate();
+            employeeDate.textContent = `Data de Cadastro: ${date.toLocaleDateString('pt-BR')}`;
+            
+            // Carregar foto se existir (agora em base64)
+            if (currentEmployee.fotoBase64) {
+                employeePhoto.src = currentEmployee.fotoBase64;
+            } else {
+                employeePhoto.src = 'https://via.placeholder.com/120';
+            }
+            
+            // Exibir card e esconder mensagem de nenhum resultado
+            employeeCard.style.display = 'block';
+            noResults.style.display = 'none';
+        }
+        
+        // Gerar PDF com QR Code
+        function generatePDF() {
+            if (!currentEmployee) return;
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Adicionar logo ou título
+            doc.setFontSize(20);
+            doc.setTextColor(40, 40, 40);
+            doc.text('Identificação do Funcionário', 105, 20, { align: 'center' });
+            
+            // Adicionar linha divisória
+            doc.setDrawColor(200, 200, 200);
+            doc.line(20, 25, 190, 25);
+            
+            // Adicionar informações do funcionário
+            doc.setFontSize(12);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Nome: ${currentEmployee.nome}`, 20, 40);
+            doc.text(`Código: ${currentEmployee.codigo}`, 20, 50);
+            doc.text(`Unidade: ${currentEmployee.unidade}`, 20, 60);
+            doc.text(`Cargo: ${currentEmployee.funcao}`, 20, 70);
+            doc.text(`Status: ${currentEmployee.status}`, 20, 80);
+            
+            // Formatar data
+            const date = currentEmployee.dataCadastro.toDate();
+            doc.text(`Data de Cadastro: ${date.toLocaleDateString('pt-BR')}`, 20, 90);
+            
+            // Adicionar foto se existir
+            if (currentEmployee.fotoBase64) {
+                doc.addImage(currentEmployee.fotoBase64, 'JPEG', 130, 35, 50, 50);
+            }
+            
+            // Gerar QR Code
+            const qrCodeData = currentEmployee.codigo;
+            const qrCodeSize = 50;
+            const qrCodeX = currentEmployee.fotoBase64 ? 130 : 130;
+            const qrCodeY = currentEmployee.fotoBase64 ? 90 : 35;
+            
+            // Criar canvas temporário para o QR Code
+            const canvas = document.createElement('canvas');
+            QRCode.toCanvas(canvas, qrCodeData, {
+                width: qrCodeSize * 4,
+                margin: 1,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, function(error) {
+                if (error) {
+                    console.error('Erro ao gerar QR Code:', error);
+                    showError('Erro ao gerar QR Code. Tente novamente.');
+                    return;
+                }
+                
+                // Adicionar QR Code ao PDF
+                const qrCodeImage = canvas.toDataURL('image/png');
+                doc.addImage(qrCodeImage, 'PNG', qrCodeX, qrCodeY, qrCodeSize, qrCodeSize);
+                
+                // Adicionar instruções
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                const instructionsY = currentEmployee.fotoBase64 ? 145 : 110;
+                doc.text('Use este QR Code para registrar a presença em operações', 20, instructionsY);
+                doc.text('Este documento deve ser mantido em local visível', 20, instructionsY + 10);
+                
+                // Salvar PDF
+                doc.save(`QRCode_${currentEmployee.codigo}.pdf`);
+            });
+        }
+        
+        // Excluir funcionário
+        function deleteEmployee() {
+            if (!currentEmployee || !confirm('Tem certeza que deseja excluir este funcionário? Esta ação não pode ser desfeita.')) {
+                return;
+            }
+            
+            db.collection('colaboradores').doc(currentEmployee.id).delete()
+            .then(() => {
+                showSuccess('Funcionário excluído com sucesso!');
+                employeeCard.style.display = 'none';
+                searchInput.value = '';
+                currentEmployee = null;
+            })
+            .catch((error) => {
+                console.error("Erro ao excluir funcionário:", error);
+                showError('Erro ao excluir funcionário. Tente novamente.');
+            });
+        }
+        
+        // Fazer upload da foto
+        function uploadPhoto() {
+            if (!currentEmployee) return;
+            
+            // Abrir o modal
+            photoModal.style.display = 'block';
+        }
+        
+        // Fechar modal
+        function closePhotoModal() {
+            photoModal.style.display = 'none';
+            photoInput.value = '';
+            previewImage.src = '';
+        }
+        
+        // Converter imagem para Base64
+        function convertImageToBase64(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                callback(e.target.result);
+            };
+            reader.onerror = function(error) {
+                console.error('Erro ao converter imagem:', error);
+                callback(null);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Salvar foto
+        function saveEmployeePhoto() {
+            if (!photoInput.files[0] || !currentEmployee) {
+                showError('Selecione uma imagem primeiro');
+                return;
+            }
+            
+            const file = photoInput.files[0];
+            
+            // Mostrar loading
+            showLoading();
+            
+            // Converter a imagem para Base64
+            convertImageToBase64(file, (base64String) => {
+                if (!base64String) {
+                    hideLoading();
+                    showError('Erro ao processar a imagem. Tente novamente.');
+                    return;
+                }
+                
+                // Atualizar documento do funcionário com a foto em Base64
+                db.collection('colaboradores').doc(currentEmployee.id).update({
+                    fotoBase64: base64String
+                })
+                .then(() => {
+                    // Atualizar a foto exibida
+                    employeePhoto.src = base64String;
+                    currentEmployee.fotoBase64 = base64String;
+                    
+                    // Fechar o modal e mostrar mensagem de sucesso
+                    closePhotoModal();
+                    showSuccess('Foto salva com sucesso!');
+                    hideLoading();
+                })
+                .catch(error => {
+                    console.error("Erro ao salvar foto:", error);
+                    showError('Erro ao salvar foto. Tente novamente.');
+                    hideLoading();
+                });
+            });
+        }
+        
+        // Preview da imagem selecionada
+        function previewSelectedImage() {
+            const file = photoInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                }
+                
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // Mostrar loading
+        function showLoading() {
+            loadingElement.style.display = 'block';
+        }
+        
+        // Ocultar loading
+        function hideLoading() {
+            loadingElement.style.display = 'none';
+        }
+        
+        // Mostrar mensagem de sucesso
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+            
+            // Ocultar após 5 segundos
+            setTimeout(hideMessages, 5000);
+        }
+        
+        // Mostrar mensagem de erro
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+            
+            // Ocultar após 5 segundos
+            setTimeout(hideMessages, 5000);
+        }
+        
+        // Ocultar mensagens
+        function hideMessages() {
+            successMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+        }
+        
+        // Event Listeners
+        searchButton.addEventListener('click', searchEmployee);
+        
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchEmployee();
+            }
+        });
+        
+        downloadBtn.addEventListener('click', generatePDF);
+        
+        deleteBtn.addEventListener('click', deleteEmployee);
+        
+        uploadPhotoBtn.addEventListener('click', uploadPhoto);
+        
+        closeModal.addEventListener('click', closePhotoModal);
+        
+        cancelUpload.addEventListener('click', closePhotoModal);
+        
+        savePhoto.addEventListener('click', saveEmployeePhoto);
+        
+        photoInput.addEventListener('change', previewSelectedImage);
+        
+        // Fechar modal clicando fora dele
+        window.addEventListener('click', (e) => {
+            if (e.target === photoModal) {
+                closePhotoModal();
+            }
+        });
+        
+        // Destacar link ativo na navbar
+        const currentPage = window.location.pathname.split('/').pop();
+        const navLinks = document.querySelectorAll('.nav-links a');
+        
+        navLinks.forEach(link => {
+            const linkPage = link.getAttribute('href');
+            if (currentPage === linkPage) {
+                link.classList.add('active');
+            } else {
+                link.classList.remove('active');
+            }
+        });
+        
+        // Simulação de logout
+        document.querySelector('.logout-btn').addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja sair do sistema?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                }).catch((error) => {
+                    console.error('Erro ao fazer logout:', error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle - Sistema de Operação</title>
+    <!-- Importar Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <style>
+        /* Variáveis de cores - Tema Azul IDÊNTICO à operação */
+        :root {
+            --primary: #1976D2;
+            --primary-dark: #0D47A1;
+            --primary-light: #BBDEFB;
+            --secondary: #64B5F6;
+            --accent: #2196F3;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #F44336;
+            --info: #29B6F6;
+            --light: #F5F9FF;
+            --dark: #0A2A4A;
+            --text: #37474F;
+            --text-light: #78909C;
+            --card-bg: #FFFFFF;
+            --border: #E3F2FD;
+            --shadow: rgba(13, 71, 161, 0.1);
+            --gradient-primary: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            --gradient-secondary: linear-gradient(135deg, var(--secondary), var(--accent));
+        }
+
+        /* Reset e estilos base - IDÊNTICO à operação */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* Navegação - IDÊNTICO à operação */
+        .navbar {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0;
+            box-shadow: 0 4px 12px var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        .logo span {
+            color: #82B1FF;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+
+        .nav-links li {
+            position: relative;
+        }
+
+        .nav-links a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 20px 16px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .nav-links a:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background: white;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+            border-radius: 3px 3px 0 0;
+        }
+
+        .nav-links a:hover:after, 
+        .nav-links a.active:after {
+            width: 80%;
+        }
+
+        .nav-links a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-links a.active {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            padding: 0 0 0 15px;
+        }
+
+        .user-info {
+            margin-right: 15px;
+            text-align: right;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+
+        .logout-btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+        }
+
+        .logout-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Conteúdo principal - IDÊNTICO à operação */
+        .content {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 5px 20px var(--shadow);
+            min-height: 400px;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            color: var(--primary-dark);
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+            font-weight: 600;
+        }
+
+        .user-unit-info {
+            background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary-dark);
+            border-left: 4px solid var(--accent);
+        }
+
+        /* ESTILOS ESPECÍFICOS DO PAINEL DE CONTROLE - MESMO PADRÃO */
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-header h2 {
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .dashboard-header p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .legend-green { background-color: var(--success); }
+        .legend-yellow { background-color: var(--warning); }
+        .legend-red { background-color: var(--danger); }
+        .legend-gray { background-color: var(--text-light); }
+        .legend-blue { background-color: var(--accent); }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px var(--shadow);
+            text-align: center;
+            border-left: 4px solid var(--accent);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px var(--shadow);
+        }
+
+        .stat-card h3 {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-meta {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .docks-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .dock-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 10px var(--shadow);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .dock-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px var(--shadow);
+        }
+
+        .dock-card.warning {
+            border-left: 4px solid var(--warning);
+        }
+
+        .dock-card.danger {
+            border-left: 4px solid var(--danger);
+        }
+
+        .dock-card.paused {
+            border-left: 4px solid var(--text-light);
+        }
+
+        .dock-card.normal {
+            border-left: 4px solid var(--success);
+        }
+
+        .dock-card.busy {
+            border-left: 4px solid var(--accent);
+        }
+
+        .dock-header {
+            background: var(--primary-dark);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dock-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .dock-status {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-free { background: var(--success); }
+        .status-busy { background: var(--accent); }
+        .status-warning { background: var(--warning); }
+        .status-danger { background: var(--danger); }
+        .status-paused { background: var(--text-light); }
+
+        .dock-details {
+            padding: 1.5rem;
+        }
+
+        .dock-detail {
+            margin-bottom: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .dock-detail strong {
+            color: var(--primary-dark);
+        }
+
+        .employees-list {
+            list-style: none;
+            margin-top: 0.5rem;
+        }
+
+        .employee-item {
+            padding: 0.2rem 0;
+            color: var(--text-light);
+        }
+
+        .time-info {
+            background: var(--light);
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .time-value {
+            font-weight: bold;
+        }
+
+        .time-warning { color: var(--warning); }
+        .time-danger { color: var(--danger); }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .carregamento-steps {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: 8px;
+        }
+
+        .step-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: var(--card-bg);
+            border-radius: 4px;
+            border-left: 4px solid var(--border);
+        }
+
+        .step-item.completed {
+            border-left-color: var(--success);
+            background: #E8F5E9;
+        }
+
+        .step-item.in-progress {
+            border-left-color: var(--accent);
+            background: #E3F2FD;
+        }
+
+        .step-time {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        /* ESTILOS DOS FILTROS - MESMO PADRÃO DOS FORMULÁRIOS DE OPERAÇÃO */
+        .filters-container {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px var(--shadow);
+            margin-bottom: 25px;
+            border: 1px solid var(--border);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            background-color: white;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+
+        .refresh-btn {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .refresh-btn:hover {
+            background: linear-gradient(135deg, var(--primary), #1565C0);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(25, 118, 210, 0.3);
+        }
+
+        /* ESTILOS DO RESUMO - MESMO PADRÃO DOS CARDS */
+        .operations-summary {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px var(--shadow);
+            margin-bottom: 25px;
+            border: 1px solid var(--border);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 1.5rem;
+            background: var(--light);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .summary-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-dark);
+        }
+
+        .summary-label {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        /* Responsividade - IDÊNTICO à operação */
+        @media (max-width: 768px) {
+            .nav-container {
+                flex-direction: column;
+                padding: 0;
+            }
+            
+            .logo {
+                padding: 12px 20px;
+                width: 100%;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .nav-links {
+                width: 100%;
+                overflow-x: auto;
+                padding: 10px 0;
+                justify-content: center;
+            }
+            
+            .nav-links a {
+                padding: 15px 12px;
+                font-size: 0.9rem;
+            }
+            
+            .user-section {
+                width: 100%;
+                justify-content: space-between;
+                padding: 12px 20px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .content {
+                margin: 15px;
+                padding: 20px 15px;
+                border-radius: 10px;
+            }
+            
+            .page-title {
+                font-size: 1.5rem;
+            }
+            
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .docks-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .legend {
+                gap: 1rem;
+            }
+            
+            .filter-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .user-info {
+                margin-right: 10px;
+            }
+            
+            .user-name {
+                font-size: 0.9rem;
+            }
+            
+            .user-role {
+                font-size: 0.7rem;
+            }
+            
+            .logout-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+            
+            .nav-links {
+                justify-content: flex-start;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stat-card {
+                padding: 1rem;
+            }
+            
+            .stat-value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span>Prod</span>Plan
+            </div>
+            
+            <ul class="nav-links">
+                <li><a href="operacao.html">Operação</a></li>
+                <li><a href="cadastrar_funcionario.html">Cadastrar Funcionário</a></li>
+                <li><a href="buscar_funcionario.html">Buscar Funcionário</a></li>
+                <li><a href="ranking.html">Ranking</a></li>
+                <li><a href="painel_controle.html" class="active">Painel de Controle</a></li>
+                <li><a href="historico.html">Histórico</a></li>
+            </ul>
+            
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-name">Carregando...</div>
+                    <div class="user-role"></div>
+                </div>
+                <button class="logout-btn">Sair</button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="content">
+        <h1 class="page-title">Painel de Controle</h1>
+        
+        <div class="user-unit-info" id="userUnitInfo">
+            Carregando informações da unidade...
+        </div>
+        
+        <div class="filters-container">
+            <div class="filter-group">
+                <div>
+                    <label for="timeFilter">Período:</label>
+                    <select id="timeFilter">
+                        <option value="today">Hoje</option>
+                        <option value="week">Esta Semana</option>
+                        <option value="month" selected>Este Mês</option>
+                        <option value="quarter">Este Trimestre</option>
+                        <option value="year">Este Ano</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="dockFilter">Doca:</label>
+                    <select id="dockFilter">
+                        <option value="all">Todas as Docas</option>
+                        <option value="1">Doca 1</option>
+                        <option value="2">Doca 2</option>
+                        <option value="3">Doca 3</option>
+                        <option value="4">Doca 4</option>
+                        <option value="5">Doca 5</option>
+                        <option value="6">Doca 6</option>
+                        <option value="7">Doca 7</option>
+                        <option value="8">Doca 8</option>
+                        <option value="9">Doca 9</option>
+                        <option value="10">Doca 10</option>
+                        <option value="11">Doca 11</option>
+                    </select>
+                </div>
+                
+                <button class="refresh-btn" id="refreshBtn">Atualizar Dados</button>
+            </div>
+        </div>
+        
+        <div class="operations-summary">
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-value" id="totalOperations">0</div>
+                    <div class="summary-label">Total de Operações</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="activeOperations">0</div>
+                    <div class="summary-label">Operações Ativas</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="completedOperations">0</div>
+                    <div class="summary-label">Operações Concluídas</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="pausedOperations">0</div>
+                    <div class="summary-label">Operações Pausadas</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-header">
+            <h2>Status das Docas</h2>
+            <p>Monitoramento em tempo real das docas de carregamento</p>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color legend-green"></div>
+                <span>Livre</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-blue"></div>
+                <span>Ocupada</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-yellow"></div>
+                <span>Alerta</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-red"></div>
+                <span>Crítico</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-gray"></div>
+                <span>Pausado</span>
+            </div>
+        </div>
+        
+        <div class="stats-container" id="statsContainer">
+            <div class="stat-card">
+                <h3>Caminhões (Dia)</h3>
+                <div class="stat-value" id="trucksDay">0</div>
+                <div class="stat-meta"><span id="trucksGoalDay"></span></div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Toneladas (Dia)</h3>
+                <div class="stat-value" id="tonsDay">0.0</div>
+                <div class="stat-meta"><span id="tonsGoalDay"></span></div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Tempo Médio (Dia)</h3>
+                <div class="stat-value" id="avgTimeDay">00:00</div>
+                <div class="stat-meta"><span id="timeLimitDay"></span></div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Mix Médio (Dia)</h3>
+                <div class="stat-value" id="avgMixDay">0.0</div>
+                <div class="stat-meta"></div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Caminhões (Mês)</h3>
+                <div class="stat-value" id="trucksMonth">0</div>
+                <div class="stat-meta"><span id="trucksGoalMonth"></span></div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Toneladas (Mês)</h3>
+                <div class="stat-value" id="tonsMonth">0.0</div>
+                <div class="stat-meta"><span id="tonsGoalMonth"></span></div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Tempo Médio (Mês)</h3>
+                <div class="stat-value" id="avgTimeMonth">00:00</div>
+                <div class="stat-meta"><span id="bestTimeMonth"></span></div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Mix Médio (Mês)</h3>
+                <div class="stat-value" id="avgMixMonth">0.0</div>
+                <div class="stat-meta"></div>
+            </div>
+        </div>
+        
+        <div class="docks-container" id="docksContainer">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Carregando dados das docas...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMu17OV-5ST1rlg00zbpt6Hv37GKqkX4A",
+            authDomain: "projetos-d868d.firebaseapp.com",
+            databaseURL: "https://projetos-d868d-default-rtdb.firebaseio.com",
+            projectId: "projetos-d868d",
+            storageBucket: "projetos-d868d.firebasestorage.app",
+            messagingSenderId: "420029352781",
+            appId: "1:420029352781:web:05176699348e0ccdd78504",
+            measurementId: "G-FXWXRX04WF"
+        };
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // Elementos da interface
+        const userNameElement = document.querySelector('.user-name');
+        const userUnitInfo = document.getElementById('userUnitInfo');
+        const docksContainer = document.getElementById('docksContainer');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const timeFilter = document.getElementById('timeFilter');
+        const dockFilter = document.getElementById('dockFilter');
+        
+        // Estado da aplicação
+        let currentUser = null;
+        let userData = null;
+        let currentUnit = '';
+        let operationsData = [];
+        let employeesData = [];
+        let realtimeListener = null;
+        
+        // Verificar autenticação
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                userNameElement.textContent = 'Carregando...';
+                
+                // Buscar dados do usuário no Firestore
+                db.collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        userData = doc.data();
+                        userNameElement.textContent = userData.name;
+                        currentUnit = userData.unit;
+                        userUnitInfo.textContent = `Unidade atual: ${currentUnit}`;
+                        
+                        // Carregar dados iniciais
+                        loadEmployeesData();
+                        setupRealtimeListener();
+                        loadDailyGoals();
+                    } else {
+                        console.error("Documento do usuário não encontrado");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Erro ao buscar dados do usuário:", error);
+                });
+            } else {
+                // Usuário não autenticado, redirecionar para login
+                window.location.href = 'login.html';
+            }
+        });
+        
+        // Configurar listener em tempo real
+        function setupRealtimeListener() {
+            // Remover listener anterior se existir
+            if (realtimeListener) {
+                realtimeListener();
+            }
+            
+            // Escutar mudanças em tempo real na coleção operations
+            realtimeListener = db.collection('operations')
+                .where('unit', '==', currentUnit)
+                .onSnapshot((snapshot) => {
+                    operationsData = [];
+                    snapshot.forEach((doc) => {
+                        operationsData.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                    
+                    // Atualizar estatísticas
+                    updateStatistics();
+                    
+                    // Atualizar docas
+                    updateDocks();
+                    
+                    // Atualizar resumo
+                    updateOperationsSummary();
+                }, (error) => {
+                    console.error("Erro em tempo real:", error);
+                });
+        }
+        
+        // Carregar dados dos colaboradores
+        function loadEmployeesData() {
+            db.collection('colaboradores')
+                .where('unidade', '==', currentUnit)
+                .get()
+                .then((querySnapshot) => {
+                    employeesData = [];
+                    querySnapshot.forEach((doc) => {
+                        employeesData.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                })
+                .catch((error) => {
+                    console.error("Erro ao carregar colaboradores:", error);
+                });
+        }
+        
+        // Carregar metas diárias
+        function loadDailyGoals() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            db.collection('daily_goals')
+                .where('unit', '==', currentUnit)
+                .where('date', '==', today)
+                .get()
+                .then((querySnapshot) => {
+                    if (!querySnapshot.empty) {
+                        const goalData = querySnapshot.docs[0].data();
+                        document.getElementById('trucksGoalDay').textContent = `Meta: ${goalData.dailyGoal}`;
+                        document.getElementById('tonsGoalDay').textContent = `Meta: ${goalData.fixedGoal}t`;
+                    } else {
+                        document.getElementById('trucksGoalDay').textContent = 'Meta: Não definida';
+                        document.getElementById('tonsGoalDay').textContent = 'Meta: Não definida';
+                    }
+                })
+                .catch((error) => {
+                    console.error("Erro ao carregar metas:", error);
+                });
+        }
+        
+        // Atualizar estatísticas
+        function updateStatistics() {
+            // Filtrar operações do dia
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const todayOperations = operationsData.filter(op => {
+                const opDate = op.createdAt ? op.createdAt.toDate() : new Date(0);
+                return opDate >= today && op.status === 'completed';
+            });
+            
+            // Filtrar operações do mês
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            const monthOperations = operationsData.filter(op => {
+                const opDate = op.createdAt ? op.createdAt.toDate() : new Date(0);
+                return opDate >= monthStart && op.status === 'completed';
+            });
+            
+            // Calcular estatísticas do dia
+            const trucksDay = todayOperations.length;
+            const tonsDay = todayOperations.reduce((sum, op) => sum + (op.tonsLoaded || 0), 0);
+            
+            // Calcular tempo médio do dia
+            const totalTimeDay = todayOperations.reduce((sum, op) => {
+                if (op.startTime && op.endTime) {
+                    const start = op.startTime.toDate();
+                    const end = op.endTime.toDate();
+                    return sum + (end - start);
+                }
+                return sum;
+            }, 0);
+            
+            const avgTimeDay = trucksDay > 0 ? totalTimeDay / (trucksDay * 60000) : 0; // em minutos
+            
+            // Calcular mix médio do dia
+            const avgMixDay = trucksDay > 0 ? tonsDay / trucksDay : 0;
+            
+            // Calcular estatísticas do mês
+            const trucksMonth = monthOperations.length;
+            const tonsMonth = monthOperations.reduce((sum, op) => sum + (op.tonsLoaded || 0), 0);
+            
+            // Calcular tempo médio do mês
+            const totalTimeMonth = monthOperations.reduce((sum, op) => {
+                if (op.startTime && op.endTime) {
+                    const start = op.startTime.toDate();
+                    const end = op.endTime.toDate();
+                    return sum + (end - start);
+                }
+                return sum;
+            }, 0);
+            
+            const avgTimeMonth = trucksMonth > 0 ? totalTimeMonth / (trucksMonth * 60000) : 0; // em minutos
+            
+            // Calcular mix médio do mês
+            const avgMixMonth = trucksMonth > 0 ? tonsMonth / trucksMonth : 0;
+            
+            // Atualizar interface
+            document.getElementById('trucksDay').textContent = trucksDay;
+            document.getElementById('tonsDay').textContent = tonsDay.toFixed(1);
+            document.getElementById('avgTimeDay').textContent = formatTime(avgTimeDay);
+            document.getElementById('avgMixDay').textContent = avgMixDay.toFixed(1);
+            
+            document.getElementById('trucksMonth').textContent = trucksMonth;
+            document.getElementById('tonsMonth').textContent = tonsMonth.toFixed(1);
+            document.getElementById('avgTimeMonth').textContent = formatTime(avgTimeMonth);
+            document.getElementById('avgMixMonth').textContent = avgMixMonth.toFixed(1);
+        }
+        
+        // Atualizar resumo das operações
+        function updateOperationsSummary() {
+            const totalOperations = operationsData.length;
+            const activeOperations = operationsData.filter(op => op.status === 'active').length;
+            const completedOperations = operationsData.filter(op => op.status === 'completed').length;
+            const pausedOperations = operationsData.filter(op => op.status === 'paused').length;
+            
+            document.getElementById('totalOperations').textContent = totalOperations;
+            document.getElementById('activeOperations').textContent = activeOperations;
+            document.getElementById('completedOperations').textContent = completedOperations;
+            document.getElementById('pausedOperations').textContent = pausedOperations;
+        }
+        
+        // Atualizar docas
+        function updateDocks() {
+            // Agrupar operações por doca
+            const docks = {};
+            
+            operationsData.forEach(op => {
+                if (op.status === 'active' || op.status === 'paused') {
+                    const dockNumber = op.doca || 'Unknown';
+                    if (!docks[dockNumber]) {
+                        docks[dockNumber] = [];
+                    }
+                    docks[dockNumber].push(op);
+                }
+            });
+            
+            // Gerar HTML para as docas
+            let docksHTML = '';
+            
+            // Docas ocupadas
+            for (const dockNumber in docks) {
+                const operations = docks[dockNumber];
+                const latestOp = operations[operations.length - 1]; // Operação mais recente
+                
+                docksHTML += generateDockCard(dockNumber, latestOp);
+            }
+            
+            // Docas livres (de 1 a 11)
+            for (let i = 1; i <= 11; i++) {
+                if (!docks[i]) {
+                    docksHTML += `
+                        <div class="dock-card normal">
+                            <div class="dock-header">
+                                <div class="dock-name">Doca ${i}</div>
+                                <div class="dock-status status-free">Livre</div>
+                            </div>
+                            <div class="dock-details">
+                                <div class="dock-detail"><strong>Status:</strong> Disponível</div>
+                                <div class="dock-detail"><strong>Próxima operação:</strong> Aguardando</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            docksContainer.innerHTML = docksHTML || '<div class="loading"><p>Nenhuma doca ocupada no momento</p></div>';
+            
+            // Iniciar atualização em tempo real para as docas ocupadas
+            startRealtimeUpdates();
+        }
+        
+        // Gerar card para doca ocupada
+        function generateDockCard(dockNumber, operation) {
+            const now = new Date();
+            const startTime = operation.startTime ? operation.startTime.toDate() : now;
+            const elapsedMs = now - startTime;
+            const elapsedMins = Math.floor(elapsedMs / 60000);
+            
+            // Determinar status da doca
+            let statusClass = '';
+            let statusText = '';
+            let statusType = '';
+            
+            if (operation.status === 'paused') {
+                statusClass = 'paused';
+                statusText = 'Pausado';
+                statusType = 'status-paused';
+            } else {
+                // Determinar status baseado no tempo (sem limite definido, sempre normal)
+                statusClass = 'busy';
+                statusText = 'Ocupada';
+                statusType = 'status-busy';
+            }
+            
+            // Encontrar nome do colaborador principal
+            let mainEmployeeName = operation.employeeName || 'Carregando...';
+            const mainEmployee = employeesData.find(emp => emp.codigo === operation.employeeCode);
+            if (mainEmployee) {
+                mainEmployeeName = mainEmployee.nome;
+            }
+            
+            // Encontrar nomes dos colaboradores adicionais
+            const additionalEmployees = [];
+            if (operation.additionalLoaders && Array.isArray(operation.additionalLoaders)) {
+                operation.additionalLoaders.forEach(code => {
+                    const employee = employeesData.find(emp => emp.codigo === code);
+                    if (employee) {
+                        additionalEmployees.push(employee.nome);
+                    } else {
+                        additionalEmployees.push(code); // Mostrar código se não encontrar nome
+                    }
+                });
+            }
+            
+            // Formatar tipo de operação para exibição
+            const operationTypeMap = {
+                'simulacao': 'Simulação',
+                'enderecamento': 'Endereçamento',
+                'shipment': 'Shipment',
+                'carregamento': 'Carregamento de Carga'
+            };
+            
+            const formattedType = operationTypeMap[operation.type] || operation.type;
+            
+            // Gerar HTML das etapas do carregamento
+            let stepsHTML = '';
+            if (operation.type === 'carregamento' && operation.steps) {
+                stepsHTML = `
+                    <div class="carregamento-steps">
+                        <strong>Etapas do Carregamento:</strong>
+                        ${generateStepsHTML(operation.steps)}
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="dock-card ${statusClass}" id="dock-${dockNumber}">
+                    <div class="dock-header">
+                        <div class="dock-name">Doca ${dockNumber}</div>
+                        <div class="dock-status ${statusType}">${statusText}</div>
+                    </div>
+                    
+                    <div class="dock-details">
+                        <div class="dock-detail"><strong>Iniciado:</strong> ${formatDateTime(startTime)}</div>
+                        <div class="dock-detail"><strong>Status:</strong> ${operation.status === 'paused' ? 'Pausado' : 'Em andamento'}</div>
+                        <div class="dock-detail"><strong>Colaborador Principal:</strong> ${mainEmployeeName}</div>
+                        
+                        ${additionalEmployees.length > 0 ? `
+                            <div class="dock-detail">
+                                <strong>Carregadores Adicionais:</strong>
+                                <ul class="employees-list">
+                                    ${additionalEmployees.map(emp => `<li class="employee-item">${emp}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="dock-detail"><strong>Tipo:</strong> ${formattedType}</div>
+                        
+                        ${operation.destino ? `<div class="dock-detail"><strong>Destino:</strong> ${operation.destino}</div>` : ''}
+                        ${operation.shipmentNumber ? `<div class="dock-detail"><strong>Shipment:</strong> ${operation.shipmentNumber}</div>` : ''}
+                        
+                        ${operation.status === 'paused' ? `
+                            <div class="dock-detail"><strong>Motivo Pausa:</strong> ${operation.pauseReason || 'Não especificado'}</div>
+                        ` : ''}
+                    </div>
+                    
+                    ${stepsHTML}
+                    
+                    <div class="time-info">
+                        <div class="dock-detail">
+                            <strong>Tempo decorrido:</strong> 
+                            <span class="time-value" id="time-${dockNumber}">${formatDuration(elapsedMins)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Gerar HTML das etapas do carregamento
+        function generateStepsHTML(steps) {
+            const stepNames = {
+                'abertura': 'Abertura do Caminhão',
+                'carregamento': 'Carregamento do Caminhão',
+                'fechamento': 'Fechamento do Caminhão',
+                'preCinto': 'Pré-Cinto',
+                'aguardandoLacre': 'Aguardando Lacre'
+            };
+            
+            let stepsHTML = '';
+            Object.keys(steps).forEach(stepKey => {
+                const step = steps[stepKey];
+                let stepClass = 'step-item';
+                if (step.status === 'completed') stepClass += ' completed';
+                if (step.status === 'in-progress') stepClass += ' in-progress';
+                
+                const stepTime = formatStepTime(step);
+                
+                stepsHTML += `
+                    <div class="${stepClass}" data-step="${stepKey}">
+                        <span>${stepNames[stepKey] || stepKey}</span>
+                        <span class="step-time">${stepTime}</span>
+                    </div>
+                `;
+            });
+            
+            return stepsHTML;
+        }
+        
+        // Formatar tempo da etapa
+        function formatStepTime(step) {
+            if (!step.startTime) return '00:00';
+            
+            const startTime = step.startTime.toDate();
+            const endTime = step.endTime ? step.endTime.toDate() : new Date();
+            
+            if (step.status === 'in-progress') {
+                const duration = Math.floor((endTime - startTime) / 1000);
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else if (step.status === 'completed' && step.endTime) {
+                const duration = Math.floor((step.endTime.toDate() - startTime) / 1000);
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            return '00:00';
+        }
+        
+        // Iniciar atualizações em tempo real
+        function startRealtimeUpdates() {
+            // Atualizar tempos a cada segundo
+            setInterval(() => {
+                operationsData.forEach(op => {
+                    if (op.status === 'active' || op.status === 'paused') {
+                        const dockNumber = op.doca;
+                        if (dockNumber) {
+                            updateDockTime(dockNumber, op);
+                        }
+                    }
+                });
+            }, 1000);
+        }
+        
+        // Atualizar tempo da doca
+        function updateDockTime(dockNumber, operation) {
+            const now = new Date();
+            const startTime = operation.startTime ? operation.startTime.toDate() : now;
+            const elapsedMs = now - startTime;
+            const elapsedMins = Math.floor(elapsedMs / 60000);
+            
+            // Atualizar elementos da interface
+            const timeElement = document.getElementById(`time-${dockNumber}`);
+            const dockCard = document.getElementById(`dock-${dockNumber}`);
+            
+            if (timeElement) {
+                timeElement.textContent = formatDuration(elapsedMins);
+            }
+            
+            // Atualizar tempos das etapas se for carregamento
+            if (operation.type === 'carregamento' && operation.steps) {
+                updateStepTimes(dockNumber, operation.steps);
+            }
+        }
+        
+        // Atualizar tempos das etapas
+        function updateStepTimes(dockNumber, steps) {
+            Object.keys(steps).forEach(stepKey => {
+                const step = steps[stepKey];
+                const timeElement = document.querySelector(`#dock-${dockNumber} [data-step="${stepKey}"] .step-time`);
+                
+                if (timeElement) {
+                    const currentTime = formatStepTime(step);
+                    timeElement.textContent = currentTime;
+                }
+            });
+        }
+        
+        // Funções auxiliares de formatação
+        function formatTime(minutes) {
+            const hrs = Math.floor(minutes / 60);
+            const mins = Math.floor(minutes % 60);
+            return `${hrs}:${mins.toString().padStart(2, '0')}h`;
+        }
+        
+        function formatDateTime(date) {
+            return date.toLocaleString('pt-BR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        function formatDuration(minutes) {
+            const hrs = Math.floor(minutes / 60);
+            const mins = Math.floor(minutes % 60);
+            if (hrs > 0 && mins > 0) {
+                return `${hrs}h ${mins}min`;
+            } else if (hrs > 0) {
+                return `${hrs}h`;
+            } else {
+                return `${mins}min`;
+            }
+        }
+        
+        // Event Listeners
+        refreshBtn.addEventListener('click', function() {
+            setupRealtimeListener();
+            loadDailyGoals();
+        });
+        
+        timeFilter.addEventListener('change', function() {
+            // Em um sistema real, filtraria os dados por período
+            console.log('Filtrando por período:', this.value);
+        });
+        
+        dockFilter.addEventListener('change', function() {
+            // Em um sistema real, filtraria os dados por doca
+            console.log('Filtrando por doca:', this.value);
+        });
+        
+        // Logout
+        document.querySelector('.logout-btn').addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja sair do sistema?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                }).catch((error) => {
+                    console.error('Erro ao fazer logout:', error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,658 @@
+/* Variáveis de cores - Tema Azul */
+:root {
+    --primary: #1976D2;
+    --primary-dark: #0D47A1;
+    --primary-light: #BBDEFB;
+    --secondary: #64B5F6;
+    --accent: #2196F3;
+    --success: #4CAF50;
+    --warning: #FF9800;
+    --danger: #F44336;
+    --info: #29B6F6;
+    --light: #F5F9FF;
+    --dark: #0A2A4A;
+    --text: #37474F;
+    --text-light: #78909C;
+    --card-bg: #FFFFFF;
+    --border: #E3F2FD;
+    --shadow: rgba(13, 71, 161, 0.1);
+    --gradient-primary: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    --gradient-secondary: linear-gradient(135deg, var(--secondary), var(--accent));
+}
+
+/* Reset e estilos base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--light);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+/* Navegação */
+.navbar {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 0;
+    box-shadow: 0 4px 12px var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1rem;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    padding: 15px 0;
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.logo span {
+    color: #82B1FF;
+}
+
+.nav-links {
+    display: flex;
+    list-style: none;
+}
+
+.nav-links li {
+    position: relative;
+}
+
+.nav-links a {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 20px 16px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    position: relative;
+}
+
+.nav-links a:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 3px;
+    background: white;
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+    border-radius: 3px 3px 0 0;
+}
+
+.nav-links a:hover:after, 
+.nav-links a.active:after {
+    width: 80%;
+}
+
+.nav-links a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-links a.active {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.user-section {
+    display: flex;
+    align-items: center;
+    padding: 0 0 0 15px;
+}
+
+.user-info {
+    margin-right: 15px;
+    text-align: right;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.user-role {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.logout-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.85rem;
+}
+
+.logout-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Conteúdo principal */
+.content {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 25px;
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 5px 20px var(--shadow);
+    min-height: 400px;
+}
+
+.page-title {
+    font-size: 1.8rem;
+    color: var(--primary-dark);
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+}
+
+.user-unit-info {
+    background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--primary-dark);
+    border-left: 4px solid var(--accent);
+}
+
+/* Controles de ranking */
+.ranking-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.filter-select {
+    padding: 10px 15px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+/* Abas do ranking */
+.ranking-tabs {
+    display: flex;
+    margin-bottom: 25px;
+    border-bottom: 2px solid var(--border);
+}
+
+.ranking-tab {
+    padding: 12px 20px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-light);
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.ranking-tab:hover {
+    color: var(--primary);
+}
+
+.ranking-tab.active {
+    color: var(--primary-dark);
+    border-bottom-color: var(--primary);
+    font-weight: 600;
+}
+
+/* Container do ranking */
+.ranking-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Cards de ranking */
+.ranking-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    position: relative;
+    transition: transform 0.3s, box-shadow 0.3s;
+    width: 100%;
+}
+
+.ranking-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px var(--shadow);
+}
+
+.ranking-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .ranking-badge-1 {
+            background-color: #f1c40f;
+        }
+        
+        .ranking-badge-2 {
+            background-color: #95a5a6;
+        }
+        
+        .ranking-badge-3 {
+            background-color: #d35400;
+        }
+        
+        .ranking-badge-4, .ranking-badge-5 {
+            background-color: #7f8c8d;
+        }
+        
+        .employee-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .employee-photo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 1rem;
+            border: 2px solid #eee;
+        }
+        
+        .employee-info h3 {
+            margin: 0 0 0.3rem 0;
+            color: #2c3e50;
+        }
+        
+        .employee-detail {
+            margin: 0.2rem 0;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        .ranking-stats {
+            display: flex;
+            justify-content: space-around;
+            border-top: 1px solid #eee;
+            padding-top: 1rem;
+        }
+
+.ranking-badge {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: white;
+    margin-right: 20px;
+    flex-shrink: 0;
+}
+
+.ranking-badge-1 {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+}
+
+.ranking-badge-2 {
+    background: linear-gradient(135deg, #C0C0C0, #A9A9A9);
+    box-shadow: 0 4px 10px rgba(192, 192, 192, 0.3);
+}
+
+.ranking-badge-3 {
+    background: linear-gradient(135deg, #CD7F32, #8B4513);
+    box-shadow: 0 4px 10px rgba(205, 127, 50, 0.3);
+}
+
+.ranking-badge-4, .ranking-badge-5 {
+    background: linear-gradient(135deg, var(--primary-light), var(--secondary));
+    color: var(--primary-dark);
+    box-shadow: 0 4px 10px rgba(33, 150, 243, 0.2);
+}
+
+.employee-header {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.employee-photo {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border);
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+
+.employee-info {
+    flex: 1;
+}
+
+.employee-name {
+    color: var(--primary-dark);
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.employee-detail {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    margin-bottom: 3px;
+}
+
+.employee-detail:last-child {
+    margin-bottom: 0;
+}
+
+.ranking-stats {
+    display: flex;
+    gap: 20px;
+    margin-left: 15px;
+}
+
+.stat-box {
+    text-align: center;
+    padding: 10px 15px;
+    background-color: var(--light);
+    border-radius: 8px;
+    min-width: 100px;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-dark);
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+/* Loading */
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+}
+
+.loading-spinner {
+    border: 4px solid var(--border);
+    border-top: 4px solid var(--accent);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Sem dados */
+.no-data {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-light);
+    background-color: var(--light);
+    border-radius: 12px;
+    border: 2px dashed var(--border);
+}
+
+.no-data p {
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+/* Badge para carregadores adicionais */
+.additional-loader-badge {
+    background-color: var(--accent);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    margin-left: 8px;
+}
+
+/* Responsividade para dispositivos móveis */
+@media (max-width: 768px) {
+    .nav-container {
+        flex-direction: column;
+        padding: 0;
+    }
+    
+    .logo {
+        padding: 12px 20px;
+        width: 100%;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .nav-links {
+        width: 100%;
+        overflow-x: auto;
+        padding: 10px 0;
+        justify-content: center;
+    }
+    
+    .nav-links a {
+        padding: 15px 12px;
+        font-size: 0.9rem;
+    }
+    
+    .user-section {
+        width: 100%;
+        justify-content: space-between;
+        padding: 12px 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .content {
+        margin: 15px;
+        padding: 20px 15px;
+        border-radius: 10px;
+    }
+    
+    .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .ranking-controls {
+        justify-content: center;
+    }
+    
+    .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+    
+    .filter-select {
+        width: 100%;
+    }
+    
+    .ranking-tabs {
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    
+    .ranking-tab {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+    
+    .ranking-card {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 15px;
+    }
+    
+    .ranking-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: 40px;
+        height: 40px;
+        margin-right: 0;
+    }
+    
+    .employee-header {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+    
+    .employee-photo {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .ranking-stats {
+        width: 100%;
+        justify-content: space-around;
+        margin-left: 0;
+        gap: 10px;
+    }
+    
+    .stat-box {
+        min-width: auto;
+        flex: 1;
+        padding: 8px 10px;
+    }
+    
+    .stat-value {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .user-info {
+        margin-right: 10px;
+    }
+    
+    .user-name {
+        font-size: 0.9rem;
+    }
+    
+    .user-role {
+        font-size: 0.7rem;
+    }
+    
+    .logout-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .nav-links {
+        justify-content: flex-start;
+    }
+    
+    .employee-name {
+        font-size: 1.1rem;
+    }
+    
+    .ranking-badge {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.1rem;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+    }
+}
+
+/* Animações para os cards do ranking */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ranking-card {
+    animation: slideIn 0.5s ease-out;
+}
+
+.ranking-card:nth-child(1) { animation-delay: 0.1s; }
+.ranking-card:nth-child(2) { animation-delay: 0.2s; }
+.ranking-card:nth-child(3) { animation-delay: 0.3s; }
+.ranking-card:nth-child(4) { animation-delay: 0.4s; }
+.ranking-card:nth-child(5) { animation-delay: 0.5s; }
+
+/* Efeito de destaque para o primeiro colocado */
+.ranking-card:first-child {
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    background: linear-gradient(to right, #FFFFFF, #FFF9E6);
+}
+
+/* Melhorias de acessibilidade */
+@media (prefers-reduced-motion: reduce) {
+    .ranking-card, .loading-spinner {
+        animation: none;
+        transition: none;
+    }
+}
