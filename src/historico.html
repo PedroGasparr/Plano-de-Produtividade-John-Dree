@@ -13,134 +13,415 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <link rel="stylesheet" href="../css/historico.css">
     <style>
+        /* Reset e estilos base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+
+        /* Navbar melhorada */
+        .navbar {
+            background: linear-gradient(135deg, #2c3e50 0%, #4a6da7 100%);
+            color: white;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+
+        .logo span {
+            color: #4CAF50;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px);
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            text-align: right;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .change-unit-btn, .logout-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .change-unit-btn {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .change-unit-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        /* Conteúdo principal */
+        .content {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .user-unit-info {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4a6da7;
+            font-weight: 600;
+            color: #2c3e50;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* Seção de senha */
+        .password-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .password-section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        .password-section p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .password-input {
+            width: 300px;
+            max-width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: border-color 0.3s;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: #4a6da7;
+        }
+
+        .password-btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #4a6da7 0%, #3a5a8f 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .password-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(74, 109, 167, 0.3);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-weight: 600;
+            display: none;
+        }
+
         /* Estilos para os cards de resumo */
         .summary-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
+            display: none;
         }
-        
+
         .summary-card {
             background: white;
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
             border-left: 4px solid #4a6da7;
-            transition: transform 0.3s;
+            transition: all 0.3s ease;
         }
 
         .summary-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
         }
-        
+
         .summary-card h3 {
             margin: 0 0 15px 0;
             font-size: 14px;
             color: #666;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            font-weight: 600;
         }
-        
+
         .summary-card .value {
-            font-size: 28px;
-            font-weight: bold;
+            font-size: 32px;
+            font-weight: 700;
             color: #2c3e50;
             margin-bottom: 5px;
+            line-height: 1.2;
         }
-        
+
         .summary-card .sub-value {
             font-size: 14px;
             color: #666;
+            font-weight: 500;
         }
 
         /* Cards específicos para tipos de operação */
-        .summary-card.simulacao {
-            border-left-color: #4CAF50;
+        .summary-card.simulacao { border-left-color: #4CAF50; }
+        .summary-card.enderecamento { border-left-color: #2196F3; }
+        .summary-card.shipment { border-left-color: #FF9800; }
+        .summary-card.carregamento { border-left-color: #9C27B0; }
+
+        /* Container principal do histórico */
+        .history-container {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-top: 20px;
         }
 
-        .summary-card.enderecamento {
-            border-left-color: #2196F3;
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
         }
 
-        .summary-card.shipment {
-            border-left-color: #FF9800;
+        .history-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #2c3e50;
         }
 
-        .summary-card.carregamento {
-            border-left-color: #9C27B0;
+        .history-summary {
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
         }
-        
-        /* Estilos para a tabela */
+
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 50px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4a6da7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Tabela responsiva */
         .table-container {
-            overflow-x: auto;
             width: 100%;
+            overflow-x: auto;
+            border-radius: 8px;
+            position: relative;
         }
 
         .history-table {
             width: 100%;
-            border-collapse: collapse;
             min-width: 1200px;
+            border-collapse: collapse;
         }
-        
-        .history-table th,
-        .history-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-            white-space: nowrap;
-        }
-        
+
         .history-table th {
-            background-color: #f8f9fa;
-            font-weight: 600;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 18px 15px;
+            text-align: left;
+            font-weight: 700;
             color: #2c3e50;
+            border-bottom: 2px solid #dee2e6;
+            white-space: nowrap;
             position: sticky;
             top: 0;
+            z-index: 10;
         }
-        
+
+        .history-table td {
+            padding: 16px 15px;
+            border-bottom: 1px solid #eef0f3;
+            vertical-align: middle;
+        }
+
         .history-table tr:hover {
-            background-color: #f8f9fa;
+            background-color: #f8fafd;
         }
-        
+
         /* Status badges */
         .status-badge {
-            padding: 6px 12px;
+            padding: 8px 16px;
             border-radius: 20px;
             font-size: 12px;
-            font-weight: bold;
+            font-weight: 700;
             display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        
-        .status-completed {
-            background-color: #4caf50;
-            color: white;
-        }
-        
-        .status-active {
-            background-color: #2196f3;
-            color: white;
-        }
-        
-        .status-paused {
-            background-color: #ff9800;
-            color: white;
-        }
-        
+
+        .status-completed { background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; }
+        .status-active { background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); color: white; }
+        .status-paused { background: linear-gradient(135deg, #FF9800 0%, #f57c00 100%); color: white; }
+
         /* Botões de ação */
-        .edit-btn {
-            background: #4a6da7;
-            color: white;
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .edit-btn, .delete-btn {
+            padding: 10px 18px;
             border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 12px;
-            transition: background 0.3s;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .edit-btn {
+            background: linear-gradient(135deg, #4a6da7 0%, #3a5a8f 100%);
+            color: white;
         }
 
         .edit-btn:hover {
-            background: #3a5a8f;
+            background: linear-gradient(135deg, #3a5a8f 0%, #2a4a7f 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(58, 90, 143, 0.3);
+        }
+
+        .delete-btn {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
         }
 
         .expand-btn {
@@ -148,317 +429,369 @@
             border: none;
             color: #4a6da7;
             cursor: pointer;
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .expand-btn:hover {
+            background: rgba(74, 109, 167, 0.1);
+            transform: scale(1.1);
+        }
+
+        /* Linha de detalhes */
+        .details-row {
+            background: linear-gradient(135deg, #f8fafd 0%, #f0f4f8 100%);
+        }
+
+        .details-content {
+            padding: 25px;
+            border-top: 2px solid #eef0f3;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .detail-group {
+            margin-bottom: 20px;
+        }
+
+        .detail-label {
+            font-weight: 700;
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 8px;
             font-size: 14px;
-            width: 20px;
-            height: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            color: #555;
+            font-size: 15px;
+            line-height: 1.6;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #eef0f3;
+        }
+
+        /* MODAIS - ATUALIZADOS E RESPONSIVOS */
+
+        /* Modal base - responsivo e moderno */
+        .modal-base {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-base.show {
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        
-        /* Linha de detalhes */
-        .details-row {
-            background-color: #fafafa;
+
+        .modal-content-base {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: translateY(-30px);
+            opacity: 0;
+            animation: slideUp 0.3s ease forwards;
+            overflow: hidden;
         }
-        
-        .details-content {
+
+        @keyframes slideUp {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header-base {
+            padding: 25px 30px;
+            background: linear-gradient(135deg, #4a6da7 0%, #3a5a8f 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title-base {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .close-btn-base {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .close-btn-base:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body-base {
+            padding: 30px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .modal-actions-base {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #eef0f3;
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+
+        /* Modal de Edição */
+        #editModal .modal-body-base {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        /* Modal de Confirmação de Exclusão */
+        #confirmDeleteModal .modal-content-base {
+            max-width: 500px;
+        }
+
+        #confirmDeleteModal .modal-header-base {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .warning-icon {
+            text-align: center;
+            font-size: 60px;
+            margin-bottom: 20px;
+            color: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .operation-info {
+            background: white;
+            border-radius: 10px;
             padding: 20px;
-            border-top: 1px solid #eee;
+            margin: 20px 0;
+            border: 2px solid #ffeaea;
+            max-height: 200px;
+            overflow-y: auto;
         }
-        
-        .details-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        
-        .detail-group {
-            margin-bottom: 15px;
-        }
-        
-        .detail-label {
-            font-weight: 600;
-            color: #2c3e50;
-            display: block;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-        
-        .detail-value {
-            color: #666;
-            font-size: 14px;
-        }
-        
-        /* Botões de exportação */
-        .export-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .pdf-btn {
-            background-color: #d32f2f;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.3s;
-        }
-        
-        .pdf-btn:hover {
-            background-color: #b71c1c;
-        }
-        
-        .csv-btn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.3s;
-        }
-        
-        .csv-btn:hover {
-            background-color: #388E3C;
-        }
-        
-        .csv-btn.full {
-            background-color: #2196F3;
-        }
-        
-        .csv-btn.full:hover {
-            background-color: #1976D2;
-        }
-        
-        /* Botão de mudança de unidade */
-        .change-unit-btn {
-            background-color: #4a6da7;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-left: 10px;
-            transition: background-color 0.3s;
-        }
-        
-        .change-unit-btn:hover {
-            background-color: #3a5a8f;
-        }
-        
-        /* Modal de mudança de unidade */
-        .unit-modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        
-        .unit-modal-content {
-            background-color: #fefefe;
-            margin: 10% auto;
-            padding: 25px;
-            border-radius: 8px;
-            width: 400px;
-            max-width: 90%;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        }
-        
-        .unit-modal-header {
+
+        .operation-info div {
+            padding: 8px 0;
+            border-bottom: 1px dashed #f0f0f0;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
         }
-        
-        .unit-modal-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #2c3e50;
+
+        .operation-info div:last-child {
+            border-bottom: none;
         }
-        
-        .unit-close-btn {
-            font-size: 24px;
-            cursor: pointer;
-            color: #777;
-            transition: color 0.3s;
-        }
-        
-        .unit-close-btn:hover {
+
+        .operation-info strong {
             color: #333;
+            min-width: 120px;
         }
-        
-        .unit-select {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
+
+        /* Modal de Mudança de Unidade */
+        #unitModal .modal-content-base {
+            max-width: 400px;
         }
-        
-        .unit-modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-        
-        .unit-cancel-btn, .unit-confirm-btn {
-            padding: 10px 20px;
+
+        /* Botões dos modais */
+        .modal-btn {
+            padding: 14px 30px;
             border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        
-        .unit-cancel-btn {
-            background-color: #f0f0f0;
-            color: #333;
-        }
-
-        .unit-cancel-btn:hover {
-            background-color: #e0e0e0;
-        }
-        
-        .unit-confirm-btn {
-            background-color: #4a6da7;
-            color: white;
-        }
-        
-        .unit-confirm-btn:hover {
-            background-color: #3a5a8f;
-        }
-
-        /* Modal de edição */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 0;
             border-radius: 8px;
-            width: 500px;
-            max-width: 90%;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 25px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .modal-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .close-btn {
-            font-size: 24px;
             cursor: pointer;
-            color: #777;
-            transition: color 0.3s;
-        }
-
-        .close-btn:hover {
-            color: #333;
-        }
-
-        .modal-body {
-            padding: 25px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #2c3e50;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #4a6da7;
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            padding: 20px 25px;
-            border-top: 1px solid #eee;
-        }
-
-        .cancel-btn, .save-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
+            font-size: 15px;
+            font-weight: 700;
             transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 120px;
         }
 
         .cancel-btn {
-            background-color: #f0f0f0;
-            color: #333;
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
         }
 
         .cancel-btn:hover {
-            background-color: #e0e0e0;
+            background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
         }
 
         .save-btn {
-            background-color: #4a6da7;
+            background: linear-gradient(135deg, #4a6da7 0%, #3a5a8f 100%);
             color: white;
         }
 
         .save-btn:hover {
-            background-color: #3a5a8f;
+            background: linear-gradient(135deg, #3a5a8f 0%, #2a4a7f 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 109, 167, 0.3);
         }
 
-        /* Estilos para a seção de metas */
+        .confirm-delete-btn {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .confirm-delete-btn:hover {
+            background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
+
+        .unit-confirm-btn {
+            background: linear-gradient(135deg, #4a6da7 0%, #3a5a8f 100%);
+            color: white;
+        }
+
+        .unit-confirm-btn:hover {
+            background: linear-gradient(135deg, #3a5a8f 0%, #2a4a7f 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 109, 167, 0.3);
+        }
+
+        /* Formulários */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 15px;
+        }
+
+        .form-input, .unit-select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .form-input:focus, .unit-select:focus {
+            outline: none;
+            border-color: #4a6da7;
+            box-shadow: 0 0 0 3px rgba(74, 109, 167, 0.1);
+        }
+
+        textarea.form-input {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        /* Botões de exportação */
+        .export-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .export-btn {
+            padding: 14px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 700;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 200px;
+            justify-content: center;
+        }
+
+        .pdf-btn {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .pdf-btn:hover {
+            background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .csv-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .csv-btn:hover {
+            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .csv-btn.full {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        }
+
+        .csv-btn.full:hover {
+            background: linear-gradient(135deg, #1976D2 0%, #0d5ba8 100%);
+        }
+
+        /* Seção de metas */
         .goals-section {
             background: white;
-            border-radius: 8px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
             margin-bottom: 30px;
+            display: none;
             border-left: 4px solid #4a6da7;
         }
 
@@ -466,12 +799,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
         }
 
         .goals-title {
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 22px;
+            font-weight: 700;
             color: #2c3e50;
             margin: 0;
         }
@@ -479,213 +814,289 @@
         .goals-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
+            gap: 25px;
+            margin-bottom: 25px;
         }
 
         .goal-input-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .goal-label {
             display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
+            font-weight: 700;
+            margin-bottom: 10px;
             color: #2c3e50;
-            font-size: 14px;
+            font-size: 15px;
         }
 
         .goal-input {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
         }
 
         .goal-input:focus {
             outline: none;
             border-color: #4a6da7;
+            box-shadow: 0 0 0 3px rgba(74, 109, 167, 0.1);
         }
 
         .goal-actions {
             display: flex;
-            gap: 10px;
+            gap: 15px;
+            margin-top: 20px;
         }
 
         .save-goal-btn {
-            background-color: #4a6da7;
+            padding: 14px 30px;
+            background: linear-gradient(135deg, #4a6da7 0%, #3a5a8f 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
+            font-size: 15px;
+            font-weight: 700;
+            transition: all 0.3s;
         }
 
         .save-goal-btn:hover {
-            background-color: #3a5a8f;
+            background: linear-gradient(135deg, #3a5a8f 0%, #2a4a7f 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 109, 167, 0.3);
         }
 
         .goal-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            gap: 20px;
+            margin-top: 30px;
+            display: none;
         }
 
         .goal-card {
-            background: #f8f9fa;
-            border-radius: 6px;
-            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
             text-align: center;
             border-left: 4px solid #4a6da7;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .goal-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
         }
 
         .goal-card.achieved {
             border-left-color: #4CAF50;
-            background: #f1f8e9;
+            background: linear-gradient(135deg, #f1f8e9 0%, #e8f5e9 100%);
         }
 
         .goal-card.not-achieved {
-            border-left-color: #f44336;
-            background: #ffebee;
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #ffebee 0%, #fce4ec 100%);
         }
 
         .goal-card-value {
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 32px;
+            font-weight: 700;
             color: #2c3e50;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
         .goal-card-label {
-            font-size: 12px;
+            font-size: 13px;
             color: #666;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            font-weight: 600;
         }
 
         .goal-progress {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 2px solid #f0f0f0;
+            display: none;
         }
 
         .progress-bar {
             width: 100%;
-            height: 8px;
-            background-color: #e0e0e0;
-            border-radius: 4px;
+            height: 12px;
+            background: #e0e0e0;
+            border-radius: 6px;
             overflow: hidden;
-            margin-bottom: 8px;
+            margin-bottom: 15px;
+            position: relative;
         }
 
         .progress-fill {
             height: 100%;
-            background-color: #4CAF50;
-            transition: width 0.3s ease;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            transition: width 0.8s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
 
         .progress-text {
-            font-size: 12px;
+            font-size: 14px;
             color: #666;
             text-align: center;
+            font-weight: 600;
         }
 
-        /* Estilos para filtros */
+        /* Filtros */
         .filters-container {
             background: white;
-            border-radius: 8px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
             margin-bottom: 30px;
+            display: none;
         }
 
         .filters-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 2px solid #f0f0f0;
         }
 
         .filters-title {
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 22px;
+            font-weight: 700;
             color: #2c3e50;
             margin: 0;
         }
 
         .filters-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
         }
 
         .filter-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .filter-label {
             display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
+            font-weight: 700;
+            margin-bottom: 10px;
             color: #2c3e50;
-            font-size: 14px;
+            font-size: 15px;
         }
 
         .filter-input, .filter-select {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+            background: white;
         }
 
         .filter-input:focus, .filter-select:focus {
             outline: none;
             border-color: #4a6da7;
+            box-shadow: 0 0 0 3px rgba(74, 109, 167, 0.1);
         }
 
         .filter-buttons {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 20px;
+            gap: 15px;
+            margin-top: 30px;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .filter-btn {
-            padding: 10px 20px;
+            padding: 14px 30px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 15px;
+            font-weight: 700;
             transition: all 0.3s;
+            min-width: 150px;
         }
 
         .clear-btn {
-            background-color: #f0f0f0;
-            color: #333;
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
         }
 
         .clear-btn:hover {
-            background-color: #e0e0e0;
+            background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
         }
 
         .apply-btn {
-            background-color: #4a6da7;
+            background: linear-gradient(135deg, #4a6da7 0%, #3a5a8f 100%);
             color: white;
         }
 
         .apply-btn:hover {
-            background-color: #3a5a8f;
+            background: linear-gradient(135deg, #3a5a8f 0%, #2a4a7f 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 109, 167, 0.3);
         }
 
-        @media (max-width: 768px) {
+        /* RESPONSIVIDADE COMPLETA */
+
+        @media (max-width: 1200px) {
+            .summary-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .details-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 992px) {
+            .nav-container {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .user-section {
+                flex-wrap: wrap;
+                justify-content: center;
+                text-align: center;
+            }
+            
             .summary-cards {
                 grid-template-columns: 1fr;
             }
@@ -694,25 +1105,255 @@
                 grid-template-columns: 1fr;
             }
             
-            .goal-cards {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
             .filters-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
             }
             
             .export-buttons {
                 flex-direction: column;
             }
             
-            .export-buttons button {
+            .export-btn {
+                min-width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 0 15px;
+            }
+            
+            .modal-content-base {
+                width: 95%;
+                max-width: 95%;
+                margin: 10px;
+            }
+            
+            .modal-header-base {
+                padding: 20px;
+            }
+            
+            .modal-body-base {
+                padding: 20px;
+            }
+            
+            .modal-actions-base {
+                padding: 15px 20px;
+                flex-direction: column;
+            }
+            
+            .modal-btn {
+                width: 100%;
+                min-width: auto;
+            }
+            
+            .history-table th,
+            .history-table td {
+                padding: 12px 10px;
+                font-size: 14px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .edit-btn, .delete-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-buttons {
+                flex-direction: column;
+            }
+            
+            .filter-btn {
+                width: 100%;
+                min-width: auto;
+            }
+            
+            .password-input {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            
+            .password-btn {
                 width: 100%;
             }
+            
+            .goal-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-title {
+                font-size: 24px;
+            }
+            
+            .summary-card {
+                padding: 20px;
+            }
+            
+            .summary-card .value {
+                font-size: 28px;
+            }
+            
+            .history-title,
+            .goals-title,
+            .filters-title {
+                font-size: 20px;
+            }
+            
+            .goal-card {
+                padding: 20px;
+            }
+            
+            .goal-card-value {
+                font-size: 28px;
+            }
+            
+            .export-btn,
+            .filter-btn,
+            .save-goal-btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+            
+            .modal-title-base {
+                font-size: 18px;
+            }
+            
+            .close-btn-base {
+                width: 30px;
+                height: 30px;
+                font-size: 24px;
+            }
+        }
+
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4a6da7;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3a5a8f;
+        }
+
+        /* Animações */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        /* Utilitários */
+        .hidden {
+            display: none !important;
+        }
+
+        .visible {
+            display: block !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        /* Estilos para mensagens de erro */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 600;
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, #ffeaea 0%, #ffcccc 100%);
+            border-left: 4px solid #e74c3c;
+            color: #c0392b;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-left: 4px solid #4CAF50;
+            color: #2e7d32;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-left: 4px solid #FF9800;
+            color: #ef6c00;
+        }
+
+        /* Tooltip */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+            margin-bottom: 5px;
+        }
+
+        [data-tooltip]:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: #333;
+            margin-bottom: -5px;
         }
     </style>
 </head>
 <body>
+    <!-- NAVBAR -->
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">
@@ -733,12 +1374,17 @@
                     <div class="user-name">Carregando...</div>
                     <div class="user-role"></div>
                 </div>
-                <button class="change-unit-btn" id="changeUnitBtn">Mudar Unidade</button>
-                <button class="logout-btn">Sair</button>
+                <button class="change-unit-btn" id="changeUnitBtn" data-tooltip="Mudar unidade de trabalho">
+                    🏢 Mudar Unidade
+                </button>
+                <button class="logout-btn" data-tooltip="Sair do sistema">
+                    🚪 Sair
+                </button>
             </div>
         </div>
     </nav>
     
+    <!-- CONTEÚDO PRINCIPAL -->
     <div class="content">
         <h1 class="page-title">Histórico de Operações</h1>
         
@@ -746,39 +1392,45 @@
             Carregando informações da unidade...
         </div>
         
+        <!-- SEÇÃO DE SENHA -->
         <div class="password-section" id="passwordSection">
-            <h2>Acesso ao Histórico</h2>
+            <h2>🔐 Acesso ao Histórico</h2>
             <p>Para acessar o histórico, digite a senha de administração:</p>
-            <div style="margin: 20px 0;">
-                <input type="password" id="passwordInput" class="password-input" placeholder="Digite a senha">
-                <button id="passwordBtn" class="password-btn">Acessar</button>
+            <div style="margin: 25px 0;">
+                <input type="password" id="passwordInput" class="password-input" 
+                       placeholder="Digite a senha de administração" autocomplete="off">
+                <button id="passwordBtn" class="password-btn">🔓 Acessar</button>
             </div>
             <div class="error-message" id="passwordError"></div>
         </div>
 
-        <!-- Seção de Metas -->
-        <div class="goals-section" id="goalsSection" style="display: none;">
+        <!-- SEÇÃO DE METAS -->
+        <div class="goals-section" id="goalsSection">
             <div class="goals-header">
-                <h2 class="goals-title">Metas de Produção</h2>
+                <h2 class="goals-title">🎯 Metas de Produção</h2>
             </div>
             
             <div class="goals-grid">
                 <div class="goal-input-group">
                     <label class="goal-label">Meta Fixa (Toneladas)</label>
-                    <input type="number" id="fixedGoal" class="goal-input" placeholder="Ex: 150" min="0" step="1">
+                    <input type="number" id="fixedGoal" class="goal-input" 
+                           placeholder="Ex: 150" min="0" step="1">
                 </div>
                 
                 <div class="goal-input-group">
                     <label class="goal-label">Meta do Dia (Toneladas)</label>
-                    <input type="number" id="dailyGoal" class="goal-input" placeholder="Ex: 160" min="0" step="1">
+                    <input type="number" id="dailyGoal" class="goal-input" 
+                           placeholder="Ex: 160" min="0" step="1">
                 </div>
             </div>
             
             <div class="goal-actions">
-                <button id="saveGoals" class="save-goal-btn">Salvar Metas</button>
+                <button id="saveGoals" class="save-goal-btn">
+                    💾 Salvar Metas
+                </button>
             </div>
             
-            <div class="goal-cards" id="goalCards" style="display: none;">
+            <div class="goal-cards" id="goalCards">
                 <div class="goal-card" id="fixedGoalCard">
                     <div class="goal-card-value" id="fixedGoalValue">0</div>
                     <div class="goal-card-label">Meta Fixa</div>
@@ -800,7 +1452,7 @@
                 </div>
             </div>
             
-            <div class="goal-progress" id="goalProgress" style="display: none;">
+            <div class="goal-progress" id="goalProgress">
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                 </div>
@@ -811,45 +1463,46 @@
             </div>
         </div>
         
-        <div class="filters-container" id="filtersContainer" style="display: none;">
+        <!-- FILTROS -->
+        <div class="filters-container" id="filtersContainer">
             <div class="filters-header">
-                <h2 class="filters-title">Filtros</h2>
+                <h2 class="filters-title">🔍 Filtros</h2>
             </div>
             
             <div class="filters-grid">
                 <div class="filter-group">
-                    <label class="filter-label">Data Inicial</label>
+                    <label class="filter-label">📅 Data Inicial</label>
                     <input type="date" id="startDate" class="filter-input">
                 </div>
                 
                 <div class="filter-group">
-                    <label class="filter-label">Data Final</label>
+                    <label class="filter-label">📅 Data Final</label>
                     <input type="date" id="endDate" class="filter-input">
                 </div>
                 
                 <div class="filter-group">
-                    <label class="filter-label">Status</label>
+                    <label class="filter-label">📊 Status</label>
                     <select id="statusFilter" class="filter-select">
                         <option value="">Todos</option>
-                        <option value="completed">Concluído</option>
-                        <option value="active">Em Andamento</option>
-                        <option value="paused">Pausado</option>
+                        <option value="completed">✅ Concluído</option>
+                        <option value="active">▶️ Em Andamento</option>
+                        <option value="paused">⏸️ Pausado</option>
                     </select>
                 </div>
                 
                 <div class="filter-group">
-                    <label class="filter-label">Tipo de Operação</label>
+                    <label class="filter-label">🏗️ Tipo de Operação</label>
                     <select id="typeFilter" class="filter-select">
                         <option value="">Todos</option>
-                        <option value="simulacao">Simulação</option>
-                        <option value="enderecamento">Endereçamento/Locate</option>
-                        <option value="shipment">Shipment</option>
-                        <option value="carregamento">Carregamento de Carga</option>
+                        <option value="simulacao">🖥️ Simulação</option>
+                        <option value="enderecamento">📍 Endereçamento/Locate</option>
+                        <option value="shipment">🚢 Shipment</option>
+                        <option value="carregamento">🚛 Carregamento de Carga</option>
                     </select>
                 </div>
                 
                 <div class="filter-group">
-                    <label class="filter-label">Colaborador</label>
+                    <label class="filter-label">👷 Colaborador</label>
                     <select id="employeeFilter" class="filter-select">
                         <option value="">Todos</option>
                         <!-- Opções serão preenchidas via JavaScript -->
@@ -857,98 +1510,114 @@
                 </div>
                 
                 <div class="filter-group">
-                    <label class="filter-label">Doca</label>
+                    <label class="filter-label">🚪 Doca</label>
                     <input type="text" id="dockFilter" class="filter-input" placeholder="Número da doca">
                 </div>
 
                 <div class="filter-group">
-                    <label class="filter-label">Shipment</label>
-                    <input type="text" id="shipmentFilter" class="filter-input" placeholder="Número do shipment">
+                    <label class="filter-label">📦 Shipment</label>
+                    <input type="text" id="shipmentFilter" class="filter-input" 
+                           placeholder="Número do shipment">
                 </div>
 
                 <div class="filter-group">
-                    <label class="filter-label">SURF</label>
-                    <input type="text" id="surfFilter" class="filter-input" placeholder="Número SURF">
+                    <label class="filter-label">🔢 SURF</label>
+                    <input type="text" id="surfFilter" class="filter-input" 
+                           placeholder="Número SURF">
                 </div>
 
                 <div class="filter-group">
-                    <label class="filter-label">Destino</label>
-                    <input type="text" id="destinoFilter" class="filter-input" placeholder="Destino">
+                    <label class="filter-label">🗺️ Destino</label>
+                    <input type="text" id="destinoFilter" class="filter-input" 
+                           placeholder="Destino">
                 </div>
             </div>
             
             <div class="filter-buttons">
-                <button id="clearFilters" class="filter-btn clear-btn">Limpar Filtros</button>
-                <button id="applyFilters" class="filter-btn apply-btn">Aplicar Filtros</button>
+                <div class="filter-actions">
+                    <button id="clearFilters" class="filter-btn clear-btn">
+                        🗑️ Limpar Filtros
+                    </button>
+                    <button id="applyFilters" class="filter-btn apply-btn">
+                        ✅ Aplicar Filtros
+                    </button>
+                </div>
+                
                 <div class="export-buttons">
-                    <button id="generatePDF" class="pdf-btn">Exportar PDF</button>
-                    <button id="generateCSV" class="csv-btn">Exportar CSV (Filtrado)</button>
-                    <button id="generateFullCSV" class="csv-btn full">Exportar CSV Completo</button>
+                    <button id="generatePDF" class="export-btn pdf-btn">
+                        📄 Exportar PDF
+                    </button>
+                    <button id="generateCSV" class="export-btn csv-btn">
+                        📊 Exportar CSV (Filtrado)
+                    </button>
+                    <button id="generateFullCSV" class="export-btn csv-btn full">
+                        📈 Exportar CSV Completo
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Cards de Resumo -->
-        <div class="summary-cards" id="summaryCards" style="display: none;">
+        <!-- CARDS DE RESUMO -->
+        <div class="summary-cards" id="summaryCards">
             <div class="summary-card">
-                <h3>Tempo Total</h3>
+                <h3>⏱️ Tempo Total</h3>
                 <div class="value" id="totalTime">0h 0min</div>
                 <div class="sub-value" id="totalMinutes">0 minutos</div>
             </div>
             
             <div class="summary-card">
-                <h3>Tempo Médio Geral</h3>
+                <h3>📊 Tempo Médio Geral</h3>
                 <div class="value" id="avgTime">0h 0min</div>
                 <div class="sub-value" id="avgMinutes">0 minutos</div>
             </div>
             
             <div class="summary-card">
-                <h3>Volume Total Carregado</h3>
+                <h3>⚖️ Volume Total Carregado</h3>
                 <div class="value" id="totalTons">0</div>
                 <div class="sub-value">toneladas</div>
             </div>
             
             <div class="summary-card">
-                <h3>Total de Mix</h3>
+                <h3>🧩 Total de Mix</h3>
                 <div class="value" id="totalMix">0</div>
                 <div class="sub-value">tipos de material</div>
             </div>
             
             <div class="summary-card">
-                <h3>Operações Realizadas</h3>
+                <h3>📋 Operações Realizadas</h3>
                 <div class="value" id="totalOperations">0</div>
                 <div class="sub-value">operações concluídas</div>
             </div>
 
-            <!-- Novos cards para tempo médio por tipo de operação -->
             <div class="summary-card simulacao">
-                <h3>Tempo Médio - Simulação</h3>
+                <h3>🖥️ Tempo Médio - Simulação</h3>
                 <div class="value" id="avgTimeSimulacao">0h 0min</div>
                 <div class="sub-value" id="avgMinutesSimulacao">0 minutos</div>
             </div>
             
             <div class="summary-card enderecamento">
-                <h3>Tempo Médio - Endereçamento</h3>
+                <h3>📍 Tempo Médio - Endereçamento</h3>
                 <div class="value" id="avgTimeEnderecamento">0h 0min</div>
                 <div class="sub-value" id="avgMinutesEnderecamento">0 minutos</div>
             </div>
             
             <div class="summary-card shipment">
-                <h3>Tempo Médio - Shipment</h3>
+                <h3>🚢 Tempo Médio - Shipment</h3>
                 <div class="value" id="avgTimeShipment">0h 0min</div>
                 <div class="sub-value" id="avgMinutesShipment">0 minutos</div>
             </div>
             
             <div class="summary-card carregamento">
-                <h3>Tempo Médio - Carregamento</h3>
+                <h3>🚛 Tempo Médio - Carregamento</h3>
                 <div class="value" id="avgTimeCarregamento">0h 0min</div>
                 <div class="sub-value" id="avgMinutesCarregamento">0 minutos</div>
             </div>
         </div>
         
-        <div class="history-container" id="historyContainer" style="display: none;">
+        <!-- HISTÓRICO -->
+        <div class="history-container" id="historyContainer">
             <div class="history-header">
-                <h2 class="history-title">Histórico de Operações</h2>
+                <h2 class="history-title">📋 Histórico de Operações</h2>
                 <div class="history-summary" id="historySummary">Mostrando 0 registros</div>
             </div>
             
@@ -956,15 +1625,15 @@
                 <div class="loading-spinner"></div>
             </div>
             
-            <div class="no-data" id="historyNoData" style="display: none;">
+            <div class="no-data" id="historyNoData">
                 Nenhum dado encontrado com os filtros aplicados.
             </div>
             
             <div class="table-container">
-                <table class="history-table" id="historyTable" style="display: none;">
+                <table class="history-table" id="historyTable">
                     <thead>
                         <tr>
-                            <th style="width: 40px;"></th>
+                            <th style="width: 50px;"></th>
                             <th>Data/Hora Início</th>
                             <th>Data/Hora Fim</th>
                             <th>Colaborador Principal</th>
@@ -977,7 +1646,7 @@
                             <th>Toneladas</th>
                             <th>Mix</th>
                             <th>Tempo Total</th>
-                            <th style="width: 80px;">Ações</th>
+                            <th style="min-width: 150px;">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="historyTableBody">
@@ -988,48 +1657,94 @@
         </div>
     </div>
     
-    <!-- Modal de Edição -->
-    <div class="modal" id="editModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Editar Operação</h2>
-                <span class="close-btn" id="closeModal">&times;</span>
+    <!-- MODAL DE EDIÇÃO -->
+    <div class="modal-base" id="editModal">
+        <div class="modal-content-base">
+            <div class="modal-header-base">
+                <h2 class="modal-title-base">✏️ Editar Operação</h2>
+                <button class="close-btn-base" id="closeEditModal">&times;</button>
             </div>
             
-            <div class="modal-body">
+            <div class="modal-body-base">
                 <div class="form-group">
                     <label class="form-label">Observações</label>
-                    <textarea id="editObservation" class="form-input" rows="3"></textarea>
+                    <textarea id="editObservation" class="form-input" rows="4" 
+                              placeholder="Adicione observações sobre a operação"></textarea>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Toneladas</label>
-                    <input type="number" id="editTons" class="form-input" step="0.1">
+                    <input type="number" id="editTons" class="form-input" 
+                           step="0.1" placeholder="Ex: 25.5">
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label">Mix de Material</label>
-                    <input type="number" id="editMix" class="form-input">
+                    <input type="number" id="editMix" class="form-input" 
+                           placeholder="Ex: 3">
                 </div>
             </div>
             
-            <div class="modal-actions">
-                <button class="cancel-btn" id="cancelEdit">Cancelar</button>
-                <button class="save-btn" id="saveEdit">Salvar Alterações</button>
+            <div class="modal-actions-base">
+                <button class="modal-btn cancel-btn" id="cancelEdit">
+                    ❌ Cancelar
+                </button>
+                <button class="modal-btn save-btn" id="saveEdit">
+                    💾 Salvar Alterações
+                </button>
             </div>
         </div>
     </div>
     
-    <!-- Modal de Mudança de Unidade -->
-    <div class="unit-modal" id="unitModal">
-        <div class="unit-modal-content">
-            <div class="unit-modal-header">
-                <h2 class="unit-modal-title">Mudar Unidade</h2>
-                <span class="unit-close-btn" id="unitCloseBtn">&times;</span>
+    <!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
+    <div class="modal-base" id="confirmDeleteModal">
+        <div class="modal-content-base">
+            <div class="modal-header-base">
+                <h2 class="modal-title-base">⚠️ Confirmar Exclusão</h2>
+                <button class="close-btn-base" id="closeConfirmModal">&times;</button>
             </div>
             
-            <div class="modal-body">
-                <p>Selecione a unidade para a qual deseja mudar:</p>
+            <div class="modal-body-base">
+                <div class="warning-icon">⚠️</div>
+                <p style="text-align: center; font-size: 16px; margin-bottom: 15px;">
+                    <strong>Tem certeza que deseja excluir esta operação permanentemente?</strong>
+                </p>
+                <p style="text-align: center; color: #666; margin-bottom: 20px;">
+                    Esta ação não pode ser desfeita e todos os dados relacionados serão perdidos.
+                </p>
+                
+                <div class="operation-info" id="operationInfo">
+                    <!-- Informações da operação serão inseridas aqui -->
+                </div>
+                
+                <p style="text-align: center; color: #e74c3c; font-weight: bold; margin-top: 20px;">
+                    ⚠️ Atenção: Esta é uma ação irreversível!
+                </p>
+            </div>
+            
+            <div class="modal-actions-base">
+                <button class="modal-btn cancel-btn" id="cancelDeleteBtn">
+                    ❌ Cancelar
+                </button>
+                <button class="modal-btn confirm-delete-btn" id="confirmDeleteBtn">
+                    🗑️ Excluir Permanentemente
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL DE MUDANÇA DE UNIDADE -->
+    <div class="modal-base" id="unitModal">
+        <div class="modal-content-base">
+            <div class="modal-header-base">
+                <h2 class="modal-title-base">🏢 Mudar Unidade</h2>
+                <button class="close-btn-base" id="unitCloseBtn">&times;</button>
+            </div>
+            
+            <div class="modal-body-base">
+                <p style="margin-bottom: 20px; color: #666;">
+                    Selecione a unidade para a qual deseja mudar:
+                </p>
                 <select id="unitSelect" class="unit-select">
                     <option value="">Selecione uma unidade</option>
                     <option value="Unidade Maracanau">Unidade Maracanau</option>
@@ -1044,9 +1759,13 @@
                 </select>
             </div>
             
-            <div class="unit-modal-actions">
-                <button class="unit-cancel-btn" id="unitCancelBtn">Cancelar</button>
-                <button class="unit-confirm-btn" id="unitConfirmBtn">Confirmar</button>
+            <div class="modal-actions-base">
+                <button class="modal-btn cancel-btn" id="unitCancelBtn">
+                    ❌ Cancelar
+                </button>
+                <button class="modal-btn unit-confirm-btn" id="unitConfirmBtn">
+                    ✅ Confirmar
+                </button>
             </div>
         </div>
     </div>
@@ -1069,69 +1788,6 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
         
-        // Elementos da interface
-        const userNameElement = document.querySelector('.user-name');
-        const userUnitInfo = document.getElementById('userUnitInfo');
-        const passwordSection = document.getElementById('passwordSection');
-        const passwordInput = document.getElementById('passwordInput');
-        const passwordBtn = document.getElementById('passwordBtn');
-        const passwordError = document.getElementById('passwordError');
-        const filtersContainer = document.getElementById('filtersContainer');
-        const historyContainer = document.getElementById('historyContainer');
-        const historyLoading = document.getElementById('historyLoading');
-        const historyNoData = document.getElementById('historyNoData');
-        const historyTable = document.getElementById('historyTable');
-        const historyTableBody = document.getElementById('historyTableBody');
-        const historySummary = document.getElementById('historySummary');
-        const editModal = document.getElementById('editModal');
-        const summaryCards = document.getElementById('summaryCards');
-        const generatePDFBtn = document.getElementById('generatePDF');
-        const generateCSVBtn = document.getElementById('generateCSV');
-        const generateFullCSVBtn = document.getElementById('generateFullCSV');
-        
-        // Elementos do modal de mudança de unidade
-        const changeUnitBtn = document.getElementById('changeUnitBtn');
-        const unitModal = document.getElementById('unitModal');
-        const unitSelect = document.getElementById('unitSelect');
-        const unitCloseBtn = document.getElementById('unitCloseBtn');
-        const unitCancelBtn = document.getElementById('unitCancelBtn');
-        const unitConfirmBtn = document.getElementById('unitConfirmBtn');
-        
-        // Elementos dos cards de resumo
-        const totalTimeElement = document.getElementById('totalTime');
-        const totalMinutesElement = document.getElementById('totalMinutes');
-        const avgTimeElement = document.getElementById('avgTime');
-        const avgMinutesElement = document.getElementById('avgMinutes');
-        const totalTonsElement = document.getElementById('totalTons');
-        const totalMixElement = document.getElementById('totalMix');
-        const totalOperationsElement = document.getElementById('totalOperations');
-        
-        // Elementos para cards de tempo médio por tipo
-        const avgTimeSimulacaoElement = document.getElementById('avgTimeSimulacao');
-        const avgMinutesSimulacaoElement = document.getElementById('avgMinutesSimulacao');
-        const avgTimeEnderecamentoElement = document.getElementById('avgTimeEnderecamento');
-        const avgMinutesEnderecamentoElement = document.getElementById('avgMinutesEnderecamento');
-        const avgTimeShipmentElement = document.getElementById('avgTimeShipment');
-        const avgMinutesShipmentElement = document.getElementById('avgMinutesShipment');
-        const avgTimeCarregamentoElement = document.getElementById('avgTimeCarregamento');
-        const avgMinutesCarregamentoElement = document.getElementById('avgMinutesCarregamento');
-        
-        // Elementos da seção de metas
-        const goalsSection = document.getElementById('goalsSection');
-        const fixedGoalInput = document.getElementById('fixedGoal');
-        const dailyGoalInput = document.getElementById('dailyGoal');
-        const saveGoalsBtn = document.getElementById('saveGoals');
-        const goalCards = document.getElementById('goalCards');
-        const goalProgress = document.getElementById('goalProgress');
-        const fixedGoalValue = document.getElementById('fixedGoalValue');
-        const dailyGoalValue = document.getElementById('dailyGoalValue');
-        const achievedValue = document.getElementById('achievedValue');
-        const progressValue = document.getElementById('progressValue');
-        const progressFill = document.getElementById('progressFill');
-        const progressText = document.getElementById('progressText');
-        const currentDailyGoal = document.getElementById('currentDailyGoal');
-        const currentAchieved = document.getElementById('currentAchieved');
-        
         // Estado da aplicação
         let currentUser = null;
         let userData = null;
@@ -1139,557 +1795,485 @@
         let operationsData = [];
         let employeesData = [];
         let currentEditId = null;
+        let currentDeleteId = null;
         let expandedRows = new Set();
-        const ADMIN_PASSWORD = "195#%$*7advan!7"; // Senha de administração
-        
-        // Estado das metas
-        let currentGoals = null;
-        let todayAchieved = 0;
+        const ADMIN_PASSWORD = "195#%$*7advan!7";
 
-        // Verificar autenticação
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                currentUser = user;
-                userNameElement.textContent = 'Carregando...';
-                
-                // Buscar dados do usuário no Firestore
-                db.collection('users').doc(user.uid).get()
-                .then((doc) => {
-                    if (doc.exists) {
-                        userData = doc.data();
-                        userNameElement.textContent = userData.name;
-                        currentUnit = userData.unit;
-                        userUnitInfo.textContent = `Unidade atual: ${currentUnit}`;
-                        
-                        // Carregar dados dos colaboradores para o filtro
-                        loadEmployeesData();
-                    } else {
-                        console.error("Documento do usuário não encontrado");
-                    }
-                })
-                .catch((error) => {
-                    console.error("Erro ao buscar dados do usuário:", error);
-                });
-            } else {
-                // Usuário não autenticado, redirecionar para login
-                window.location.href = 'login.html';
-            }
-        });
-        
-        // Carregar dados dos colaboradores
-        function loadEmployeesData() {
-            db.collection('colaboradores')
-                .where('unidade', '==', currentUnit)
-                .get()
-                .then((querySnapshot) => {
-                    employeesData = [];
-                    const employeeFilter = document.getElementById('employeeFilter');
-                    
-                    // Adicionar opção "Todos"
-                    employeeFilter.innerHTML = '<option value="">Todos</option>';
-                    
-                    querySnapshot.forEach((doc) => {
-                        const employeeData = {
-                            id: doc.id,
-                            ...doc.data()
-                        };
-                        
-                        employeesData.push(employeeData);
-                        
-                        // Adicionar ao filtro
-                        const option = document.createElement('option');
-                        option.value = employeeData.codigo;
-                        option.textContent = employeeData.nome;
-                        employeeFilter.appendChild(option);
-                    });
-                })
-                .catch((error) => {
-                    console.error("Erro ao carregar colaboradores:", error);
-                });
+        // Elementos da interface
+        const elements = {
+            userName: document.querySelector('.user-name'),
+            userUnitInfo: document.getElementById('userUnitInfo'),
+            passwordSection: document.getElementById('passwordSection'),
+            passwordInput: document.getElementById('passwordInput'),
+            passwordBtn: document.getElementById('passwordBtn'),
+            passwordError: document.getElementById('passwordError'),
+            filtersContainer: document.getElementById('filtersContainer'),
+            historyContainer: document.getElementById('historyContainer'),
+            historyLoading: document.getElementById('historyLoading'),
+            historyNoData: document.getElementById('historyNoData'),
+            historyTable: document.getElementById('historyTable'),
+            historyTableBody: document.getElementById('historyTableBody'),
+            historySummary: document.getElementById('historySummary'),
+            editModal: document.getElementById('editModal'),
+            confirmDeleteModal: document.getElementById('confirmDeleteModal'),
+            unitModal: document.getElementById('unitModal'),
+            summaryCards: document.getElementById('summaryCards'),
+            goalsSection: document.getElementById('goalsSection'),
+            goalCards: document.getElementById('goalCards'),
+            goalProgress: document.getElementById('goalProgress'),
+            currentGoals: null,
+            todayAchieved: 0
+        };
+
+        // Inicializar aplicação
+        function initApp() {
+            setupFirebaseAuth();
+            setupEventListeners();
+            setupModalListeners();
         }
-        
-        // Verificar senha de administração
+
+        // Configurar autenticação do Firebase
+        function setupFirebaseAuth() {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    currentUser = user;
+                    elements.userName.textContent = 'Carregando...';
+                    loadUserData(user.uid);
+                } else {
+                    window.location.href = 'login.html';
+                }
+            });
+        }
+
+        // Carregar dados do usuário
+        async function loadUserData(uid) {
+            try {
+                const doc = await db.collection('users').doc(uid).get();
+                if (doc.exists) {
+                    userData = doc.data();
+                    elements.userName.textContent = userData.name;
+                    currentUnit = userData.unit;
+                    elements.userUnitInfo.textContent = `🏢 Unidade atual: ${currentUnit}`;
+                    await loadEmployeesData();
+                }
+            } catch (error) {
+                console.error("Erro ao carregar dados do usuário:", error);
+            }
+        }
+
+        // Carregar dados dos colaboradores
+        async function loadEmployeesData() {
+            try {
+                const snapshot = await db.collection('colaboradores')
+                    .where('unidade', '==', currentUnit)
+                    .get();
+                
+                employeesData = [];
+                const employeeFilter = document.getElementById('employeeFilter');
+                employeeFilter.innerHTML = '<option value="">Todos</option>';
+                
+                snapshot.forEach((doc) => {
+                    const data = { id: doc.id, ...doc.data() };
+                    employeesData.push(data);
+                    
+                    const option = document.createElement('option');
+                    option.value = data.codigo;
+                    option.textContent = `${data.nome} (${data.codigo})`;
+                    employeeFilter.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Erro ao carregar colaboradores:", error);
+            }
+        }
+
+        // Configurar listeners de eventos
+        function setupEventListeners() {
+            // Senha
+            elements.passwordBtn.addEventListener('click', checkPassword);
+            elements.passwordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') checkPassword();
+            });
+
+            // Filtros
+            document.getElementById('applyFilters').addEventListener('click', applyFilters);
+            document.getElementById('clearFilters').addEventListener('click', clearFilters);
+
+            // Exportação
+            document.getElementById('generatePDF').addEventListener('click', generatePDF);
+            document.getElementById('generateCSV').addEventListener('click', generateCSV);
+            document.getElementById('generateFullCSV').addEventListener('click', generateFullCSV);
+
+            // Metas
+            document.getElementById('saveGoals').addEventListener('click', saveGoals);
+
+            // Mudança de unidade
+            document.getElementById('changeUnitBtn').addEventListener('click', () => {
+                showModal(elements.unitModal);
+            });
+
+            // Logout
+            document.querySelector('.logout-btn').addEventListener('click', logout);
+        }
+
+        // Configurar listeners dos modais
+        function setupModalListeners() {
+            // Modal de edição
+            document.getElementById('closeEditModal').addEventListener('click', () => hideModal(elements.editModal));
+            document.getElementById('cancelEdit').addEventListener('click', () => hideModal(elements.editModal));
+            document.getElementById('saveEdit').addEventListener('click', saveEdit);
+
+            // Modal de confirmação de exclusão
+            document.getElementById('closeConfirmModal').addEventListener('click', () => hideModal(elements.confirmDeleteModal));
+            document.getElementById('cancelDeleteBtn').addEventListener('click', () => hideModal(elements.confirmDeleteModal));
+            document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDeleteOperation);
+
+            // Modal de unidade
+            document.getElementById('unitCloseBtn').addEventListener('click', () => hideModal(elements.unitModal));
+            document.getElementById('unitCancelBtn').addEventListener('click', () => hideModal(elements.unitModal));
+            document.getElementById('unitConfirmBtn').addEventListener('click', confirmUnitChange);
+
+            // Fechar modais ao clicar fora
+            window.addEventListener('click', (e) => {
+                if (e.target === elements.editModal) hideModal(elements.editModal);
+                if (e.target === elements.confirmDeleteModal) hideModal(elements.confirmDeleteModal);
+                if (e.target === elements.unitModal) hideModal(elements.unitModal);
+            });
+
+            // Fechar com ESC
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    hideModal(elements.editModal);
+                    hideModal(elements.confirmDeleteModal);
+                    hideModal(elements.unitModal);
+                }
+            });
+        }
+
+        // Funções para mostrar/esconder modais
+        function showModal(modal) {
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideModal(modal) {
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        // Verificar senha
         function checkPassword() {
-            const password = passwordInput.value.trim();
+            const password = elements.passwordInput.value.trim();
             
             if (password === ADMIN_PASSWORD) {
-                passwordError.style.display = 'none';
-                passwordSection.style.display = 'none';
-                filtersContainer.style.display = 'block';
-                historyContainer.style.display = 'block';
-                summaryCards.style.display = 'grid';
-                goalsSection.style.display = 'block';
+                elements.passwordError.style.display = 'none';
+                showMainContent();
                 loadHistoryData();
                 loadGoals();
             } else {
-                passwordError.textContent = 'Senha incorreta. Tente novamente.';
-                passwordError.style.display = 'block';
+                elements.passwordError.textContent = '❌ Senha incorreta. Tente novamente.';
+                elements.passwordError.style.display = 'block';
+                elements.passwordInput.value = '';
+                elements.passwordInput.focus();
             }
         }
-        
+
+        // Mostrar conteúdo principal
+        function showMainContent() {
+            elements.passwordSection.style.display = 'none';
+            elements.filtersContainer.style.display = 'block';
+            elements.historyContainer.style.display = 'block';
+            elements.summaryCards.style.display = 'grid';
+            elements.goalsSection.style.display = 'block';
+        }
+
         // Carregar dados do histórico
-        function loadHistoryData() {
+        async function loadHistoryData() {
             showHistoryLoading();
             
-            // Buscar operações da unidade atual
-            db.collection('operations')
-                .where('unit', '==', currentUnit)
-                .orderBy('createdAt', 'desc')
-                .get()
-                .then((querySnapshot) => {
-                    operationsData = [];
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        operationsData.push({
-                            id: doc.id,
-                            ...data
-                        });
-                    });
-                    
-                    // Aplicar filtros iniciais
-                    applyFilters();
-                })
-                .catch((error) => {
-                    console.error("Erro ao carregar histórico:", error);
-                    showHistoryError('Erro ao carregar histórico.');
+            try {
+                const snapshot = await db.collection('operations')
+                    .where('unit', '==', currentUnit)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+                
+                operationsData = [];
+                snapshot.forEach((doc) => {
+                    operationsData.push({ id: doc.id, ...doc.data() });
                 });
+                
+                applyFilters();
+            } catch (error) {
+                console.error("Erro ao carregar histórico:", error);
+                showHistoryError('Erro ao carregar histórico.');
+            }
         }
-        
-        // Função corrigida para filtrar datas
-        function filterByDate(data, startDate, endDate) {
-            return data.filter(operation => {
-                const operationDate = operation.startTime ? operation.startTime.toDate() : new Date(0);
-                
-                // Se não há filtro de data, incluir todas as operações
-                if (!startDate && !endDate) {
-                    return true;
-                }
-                
-                let include = true;
-                
-                // Filtro de data inicial
-                if (startDate) {
-                    const start = new Date(startDate);
-                    start.setHours(0, 0, 0, 0); // Início do dia
-                    if (operationDate < start) {
-                        include = false;
-                    }
-                }
-                
-                // Filtro de data final
-                if (endDate) {
-                    const end = new Date(endDate);
-                    end.setHours(23, 59, 59, 999); // Final do dia
-                    if (operationDate > end) {
-                        include = false;
-                    }
-                }
-                
-                return include;
-            });
-        }
-        
+
         // Aplicar filtros
         function applyFilters() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const status = document.getElementById('statusFilter').value;
-            const type = document.getElementById('typeFilter').value;
-            const employee = document.getElementById('employeeFilter').value;
-            const dock = document.getElementById('dockFilter').value.toLowerCase();
-            const shipment = document.getElementById('shipmentFilter').value.toLowerCase();
-            const surf = document.getElementById('surfFilter').value.toLowerCase();
-            const destino = document.getElementById('destinoFilter').value.toLowerCase();
-            
-            let filteredData = operationsData;
-            
-            // Filtrar por data (função corrigida)
-            filteredData = filterByDate(filteredData, startDate, endDate);
-            
-            // Filtrar por status
-            if (status) {
-                filteredData = filteredData.filter(op => op.status === status);
-            }
-            
-            // Filtrar por tipo
-            if (type) {
-                filteredData = filteredData.filter(op => op.type === type);
-            }
-            
-            // Filtrar por colaborador
-            if (employee) {
-                filteredData = filteredData.filter(op => 
-                    op.employeeCode === employee || 
-                    (op.additionalLoaders && op.additionalLoaders.includes(employee))
-                );
-            }
-            
-            // Filtrar por doca
-            if (dock) {
-                filteredData = filteredData.filter(op => 
-                    (op.doca && op.doca.toLowerCase().includes(dock)) ||
-                    (op.dock && op.dock.toLowerCase().includes(dock))
-                );
-            }
-            
-            // Filtrar por shipment
-            if (shipment) {
-                filteredData = filteredData.filter(op => 
-                    (op.shipmentNumber && op.shipmentNumber.toLowerCase().includes(shipment)) ||
-                    (op.shipmentId && op.shipmentId.toLowerCase().includes(shipment))
-                );
-            }
-            
-            // Filtrar por SURF
-            if (surf) {
-                filteredData = filteredData.filter(op => 
-                    (op.surfNumber && op.surfNumber.toLowerCase().includes(surf)) ||
-                    (op.surfCode && op.surfCode.toLowerCase().includes(surf))
-                );
-            }
-            
-            // Filtrar por destino
-            if (destino) {
-                filteredData = filteredData.filter(op => 
-                    (op.destino && op.destino.toLowerCase().includes(destino)) ||
-                    (op.destination && op.destination.toLowerCase().includes(destino))
-                );
-            }
-            
-            // Exibir dados filtrados
-            displayHistoryData(filteredData);
-            updateSummaryCards(filteredData);
-            
-            // Recalcular metas após aplicar filtros
-            calculateTodayAchieved();
-        }
-        
-        // Atualizar cards de resumo
-        function updateSummaryCards(data) {
-            const completedOperations = data.filter(op => op.status === 'completed');
-            
-            // Calcular totais gerais
-            const totalTons = completedOperations.reduce((sum, op) => sum + (op.tonsLoaded || 0), 0);
-            const totalMix = completedOperations.reduce((sum, op) => sum + (op.materialMix || 0), 0);
-            const totalOperationsCount = completedOperations.length;
-            
-            // Calcular tempo total e médio geral
-            let totalMinutes = 0;
-            completedOperations.forEach(op => {
-                if (op.startTime && op.endTime) {
-                    const start = op.startTime.toDate();
-                    const end = op.endTime.toDate();
-                    const duration = (end - start) / (1000 * 60); // minutos
-                    totalMinutes += duration;
-                }
-            });
-            
-            const avgMinutes = totalOperationsCount > 0 ? totalMinutes / totalOperationsCount : 0;
-            
-            // Atualizar elementos gerais
-            totalTonsElement.textContent = totalTons.toFixed(1);
-            totalMixElement.textContent = totalMix;
-            totalOperationsElement.textContent = totalOperationsCount;
-            
-            // Formatando tempo geral
-            const totalHours = Math.floor(totalMinutes / 60);
-            const totalMins = Math.round(totalMinutes % 60);
-            totalTimeElement.textContent = `${totalHours}h ${totalMins}min`;
-            totalMinutesElement.textContent = `${Math.round(totalMinutes)} minutos`;
-            
-            const avgHours = Math.floor(avgMinutes / 60);
-            const avgMins = Math.round(avgMinutes % 60);
-            avgTimeElement.textContent = `${avgHours}h ${avgMins}min`;
-            avgMinutesElement.textContent = `${Math.round(avgMinutes)} minutos`;
-            
-            // Calcular tempo médio por tipo de operação
-            calculateAverageTimeByType(completedOperations);
-        }
-        
-        // Calcular tempo médio por tipo de operação
-        function calculateAverageTimeByType(completedOperations) {
-            const types = {
-                'simulacao': { totalMinutes: 0, count: 0 },
-                'enderecamento': { totalMinutes: 0, count: 0 },
-                'shipment': { totalMinutes: 0, count: 0 },
-                'carregamento': { totalMinutes: 0, count: 0 }
+            const filters = {
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                status: document.getElementById('statusFilter').value,
+                type: document.getElementById('typeFilter').value,
+                employee: document.getElementById('employeeFilter').value,
+                dock: document.getElementById('dockFilter').value.toLowerCase(),
+                shipment: document.getElementById('shipmentFilter').value.toLowerCase(),
+                surf: document.getElementById('surfFilter').value.toLowerCase(),
+                destino: document.getElementById('destinoFilter').value.toLowerCase()
             };
             
-            // Calcular tempo total para cada tipo
-            completedOperations.forEach(op => {
-                if (op.startTime && op.endTime && types[op.type]) {
-                    const start = op.startTime.toDate();
-                    const end = op.endTime.toDate();
-                    const duration = (end - start) / (1000 * 60); // minutos
+            let filteredData = filterOperations(operationsData, filters);
+            displayHistoryData(filteredData);
+            updateSummaryCards(filteredData);
+            calculateTodayAchieved(filteredData);
+        }
+
+        // Filtrar operações
+        function filterOperations(data, filters) {
+            return data.filter(op => {
+                // Filtro por data
+                if (filters.startDate || filters.endDate) {
+                    const opDate = op.startTime ? op.startTime.toDate() : new Date(0);
                     
-                    types[op.type].totalMinutes += duration;
-                    types[op.type].count += 1;
+                    if (filters.startDate) {
+                        const start = new Date(filters.startDate);
+                        start.setHours(0, 0, 0, 0);
+                        if (opDate < start) return false;
+                    }
+                    
+                    if (filters.endDate) {
+                        const end = new Date(filters.endDate);
+                        end.setHours(23, 59, 59, 999);
+                        if (opDate > end) return false;
+                    }
                 }
+                
+                // Filtros simples
+                if (filters.status && op.status !== filters.status) return false;
+                if (filters.type && op.type !== filters.type) return false;
+                
+                // Filtro por colaborador
+                if (filters.employee && op.employeeCode !== filters.employee) {
+                    if (!op.additionalLoaders || !op.additionalLoaders.includes(filters.employee)) {
+                        return false;
+                    }
+                }
+                
+                // Filtros de texto
+                if (filters.dock && !(op.doca || op.dock || '').toLowerCase().includes(filters.dock)) return false;
+                if (filters.shipment && !(op.shipmentNumber || op.shipmentId || '').toLowerCase().includes(filters.shipment)) return false;
+                if (filters.surf && !(op.surfNumber || op.surfCode || '').toLowerCase().includes(filters.surf)) return false;
+                if (filters.destino && !(op.destino || op.destination || '').toLowerCase().includes(filters.destino)) return false;
+                
+                return true;
             });
-            
-            // Atualizar cards para cada tipo
-            updateTypeCard('simulacao', types.simulacao, avgTimeSimulacaoElement, avgMinutesSimulacaoElement);
-            updateTypeCard('enderecamento', types.enderecamento, avgTimeEnderecamentoElement, avgMinutesEnderecamentoElement);
-            updateTypeCard('shipment', types.shipment, avgTimeShipmentElement, avgMinutesShipmentElement);
-            updateTypeCard('carregamento', types.carregamento, avgTimeCarregamentoElement, avgMinutesCarregamentoElement);
         }
-        
-        // Atualizar card individual de tipo
-        function updateTypeCard(typeName, typeData, timeElement, minutesElement) {
-            const avgMinutes = typeData.count > 0 ? typeData.totalMinutes / typeData.count : 0;
-            const avgHours = Math.floor(avgMinutes / 60);
-            const avgMins = Math.round(avgMinutes % 60);
-            
-            timeElement.textContent = `${avgHours}h ${avgMins}min`;
-            minutesElement.textContent = `${Math.round(avgMinutes)} minutos (${typeData.count} ops)`;
-        }
-        
+
         // Exibir dados do histórico
         function displayHistoryData(data) {
             hideHistoryLoading();
             
             if (data.length === 0) {
-                historyNoData.style.display = 'block';
-                historyTable.style.display = 'none';
-                historySummary.textContent = 'Nenhum registro encontrado';
+                elements.historyNoData.style.display = 'block';
+                elements.historyTable.style.display = 'none';
+                elements.historySummary.textContent = 'Nenhum registro encontrado';
                 return;
             }
             
-            historyNoData.style.display = 'none';
-            historyTable.style.display = 'table';
-            historySummary.textContent = `Mostrando ${data.length} de ${operationsData.length} registros`;
+            elements.historyNoData.style.display = 'none';
+            elements.historyTable.style.display = 'table';
+            elements.historySummary.textContent = `Mostrando ${data.length} de ${operationsData.length} registros`;
             
-            // Limpar tabela
-            historyTableBody.innerHTML = '';
+            elements.historyTableBody.innerHTML = '';
+            data.forEach(operation => createTableRow(operation));
+        }
+
+        // Criar linha da tabela
+        function createTableRow(operation) {
+            const isExpanded = expandedRows.has(operation.id);
             
-            // Preencher tabela
-            data.forEach(operation => {
-                const isExpanded = expandedRows.has(operation.id);
-                
-                // Formatar datas
-                const startDate = operation.startTime ? operation.startTime.toDate() : new Date(0);
-                const endDate = operation.endTime ? operation.endTime.toDate() : new Date(0);
-                const formattedStartDate = startDate.toLocaleString('pt-BR');
-                const formattedEndDate = endDate > new Date(0) ? endDate.toLocaleString('pt-BR') : 'Em andamento';
-                
-                // Calcular tempo total
-                let totalTime = 'N/A';
-                if (operation.startTime && operation.endTime) {
-                    const start = operation.startTime.toDate();
-                    const end = operation.endTime.toDate();
-                    const duration = (end - start) / (1000 * 60); // minutos
-                    const hours = Math.floor(duration / 60);
-                    const minutes = Math.round(duration % 60);
-                    totalTime = `${hours}h ${minutes}min`;
-                }
-                
-                // Encontrar nome do colaborador
-                let employeeName = operation.employeeName || 'N/A';
-                const employee = employeesData.find(emp => emp.codigo === operation.employeeCode);
-                if (employee) {
-                    employeeName = employee.nome;
-                }
-                
-                // Formatar tipo de operação
-                const typeMap = {
-                    'simulacao': 'Simulação',
-                    'enderecamento': 'Endereçamento/Locate',
-                    'shipment': 'Shipment',
-                    'carregamento': 'Carregamento de Carga'
-                };
-                const formattedType = typeMap[operation.type] || operation.type;
-                
-                // Formatar status
-                let statusClass = '';
-                let statusText = '';
-                
-                switch (operation.status) {
-                    case 'completed':
-                        statusClass = 'status-completed';
-                        statusText = 'Concluído';
-                        break;
-                    case 'active':
-                        statusClass = 'status-active';
-                        statusText = 'Em Andamento';
-                        break;
-                    case 'paused':
-                        statusClass = 'status-paused';
-                        statusText = 'Pausado';
-                        break;
-                    default:
-                        statusClass = '';
-                        statusText = operation.status || 'N/A';
-                }
-                
-                // Linha principal
-                const mainRow = document.createElement('tr');
-                mainRow.innerHTML = `
-                    <td>
-                        <button class="expand-btn" data-id="${operation.id}">
-                            ${isExpanded ? '▼' : '►'}
+            // Formatar dados
+            const startDate = formatDateTime(operation.startTime);
+            const endDate = formatDateTime(operation.endTime, 'Em andamento');
+            const employeeName = getEmployeeName(operation.employeeCode);
+            const formattedType = getOperationType(operation.type);
+            const formattedStatus = getStatusInfo(operation.status);
+            const totalTime = calculateTotalTime(operation);
+            
+            // Linha principal
+            const mainRow = document.createElement('tr');
+            mainRow.innerHTML = `
+                <td>
+                    <button class="expand-btn" data-id="${operation.id}" data-tooltip="${isExpanded ? 'Recolher' : 'Expandir'}">
+                        ${isExpanded ? '▼' : '►'}
+                    </button>
+                </td>
+                <td>${startDate}</td>
+                <td>${endDate}</td>
+                <td>${employeeName}</td>
+                <td>${operation.additionalLoaders ? operation.additionalLoaders.join(', ') : 'Nenhum'}</td>
+                <td>${formattedType.icon} ${formattedType.text}</td>
+                <td><span class="status-badge ${formattedStatus.class}">${formattedStatus.text}</span></td>
+                <td>${operation.doca || operation.dock || 'N/A'}</td>
+                <td>${operation.destino || operation.destination || 'N/A'}</td>
+                <td>${operation.shipmentNumber || 'N/A'}</td>
+                <td>${operation.tonsLoaded || '0'}</td>
+                <td>${operation.materialMix || '0'}</td>
+                <td>${totalTime}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="edit-btn" data-id="${operation.id}" data-tooltip="Editar operação">
+                            ✏️ Editar
                         </button>
-                    </td>
-                    <td>${formattedStartDate}</td>
-                    <td>${formattedEndDate}</td>
-                    <td>${employeeName}</td>
-                    <td>${operation.additionalLoaders ? operation.additionalLoaders.join(', ') : 'Nenhum'}</td>
-                    <td>${formattedType}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td>${operation.doca || operation.dock || 'N/A'}</td>
-                    <td>${operation.destino || operation.destination || 'N/A'}</td>
-                    <td>${operation.shipmentNumber || 'N/A'}</td>
-                    <td>${operation.tonsLoaded || '0'}</td>
-                    <td>${operation.materialMix || '0'}</td>
-                    <td>${totalTime}</td>
-                    <td>
-                        <button class="edit-btn" data-id="${operation.id}">Editar</button>
-                    </td>
-                `;
-                
-                historyTableBody.appendChild(mainRow);
-                
-                // Linha de detalhes (expandida)
-                if (isExpanded) {
-                    const detailsRow = document.createElement('tr');
-                    detailsRow.className = 'details-row';
-                    detailsRow.id = `details-${operation.id}`;
-                    
-                    let detailsHTML = '<td colspan="14"><div class="details-content"><div class="details-grid">';
-                    
-                    // Informações gerais
-                    detailsHTML += `
-                        <div class="detail-group">
-                            <span class="detail-label">Criado por:</span>
-                            <span class="detail-value">${operation.createdBy || 'N/A'}</span>
-                        </div>
-                        <div class="detail-group">
-                            <span class="detail-label">Observações:</span>
-                            <span class="detail-value">${operation.observation || 'Nenhuma'}</span>
-                        </div>
-                    `;
-                    
-                    // Informações específicas por tipo de operação
-                    if (operation.type === 'simulacao') {
-                        detailsHTML += `
-                            <div class="detail-group">
-                                <span class="detail-label">Endereço/Área:</span>
-                                <span class="detail-value">${operation.endereco || 'N/A'}</span>
-                            </div>
-                        `;
-                    }
-                    
-                    if (operation.type === 'enderecamento') {
-                        detailsHTML += `
-                            <div class="detail-group">
-                                <span class="detail-label">Número SURF:</span>
-                                <span class="detail-value">${operation.surfNumber || 'N/A'}</span>
-                            </div>
-                        `;
-                    }
-                    
-                    if (operation.type === 'shipment') {
-                        detailsHTML += `
-                            <div class="detail-group">
-                                <span class="detail-label">Tipo de Transporte:</span>
-                                <span class="detail-value">${operation.transportType || 'N/A'}</span>
-                            </div>
-                            <div class="detail-group">
-                                <span class="detail-label">Código SURF:</span>
-                                <span class="detail-value">${operation.surfCode || 'N/A'}</span>
-                            </div>
-                        `;
-                    }
-                    
-                    if (operation.type === 'carregamento') {
-                        detailsHTML += `
-                            <div class="detail-group">
-                                <span class="detail-label">Shipment ID:</span>
-                                <span class="detail-value">${operation.shipmentId || 'N/A'}</span>
-                            </div>
-                        `;
-                        
-                        // Etapas do carregamento
-                        if (operation.steps) {
-                            detailsHTML += `
-                                <div class="detail-group">
-                                    <span class="detail-label">Etapas:</span>
-                                    <span class="detail-value">
-                                        ${Object.keys(operation.steps).map(step => {
-                                            const stepData = operation.steps[step];
-                                            if (!stepData) return '';
-                                            const stepName = getStepName(step);
-                                            const stepStatus = stepData.status || 'N/A';
-                                            return `${stepName}: ${stepStatus}`;
-                                        }).filter(Boolean).join(', ')}
-                                    </span>
-                                </div>
-                            `;
-                        }
-                        
-                        if (operation.currentStep) {
-                            detailsHTML += `
-                                <div class="detail-group">
-                                    <span class="detail-label">Etapa Atual:</span>
-                                    <span class="detail-value">${getStepName(operation.currentStep) || 'N/A'}</span>
-                                </div>
-                            `;
-                        }
-                    }
-                    
-                    // Informações de pausa/reabertura
-                    if (operation.pauseReason) {
-                        detailsHTML += `
-                            <div class="detail-group">
-                                <span class="detail-label">Motivo da Pausa:</span>
-                                <span class="detail-value">${operation.pauseReason || 'Nenhuma'}</span>
-                            </div>
-                        `;
-                    }
-                    
-                    if (operation.reopenReason) {
-                        detailsHTML += `
-                            <div class="detail-group">
-                                <span class="detail-label">Motivo da Reabertura:</span>
-                                <span class="detail-value">${operation.reopenReason || 'Nenhum'}</span>
-                            </div>
-                        `;
-                    }
-                    
-                    detailsHTML += '</div></div></td>';
-                    detailsRow.innerHTML = detailsHTML;
-                    historyTableBody.appendChild(detailsRow);
-                }
-            });
+                        <button class="delete-btn" data-id="${operation.id}" data-tooltip="Excluir operação">
+                            🗑️ Excluir
+                        </button>
+                    </div>
+                </td>
+            `;
+            
+            elements.historyTableBody.appendChild(mainRow);
+            
+            // Linha de detalhes
+            if (isExpanded) {
+                createDetailsRow(operation);
+            }
             
             // Adicionar event listeners
-            document.querySelectorAll('.expand-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const operationId = this.getAttribute('data-id');
-                    toggleDetails(operationId);
-                });
+            mainRow.querySelector('.expand-btn').addEventListener('click', (e) => {
+                toggleDetails(operation.id);
+                e.stopPropagation();
             });
             
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const operationId = this.getAttribute('data-id');
-                    openEditModal(operationId);
-                });
+            mainRow.querySelector('.edit-btn').addEventListener('click', (e) => {
+                openEditModal(operation.id);
+                e.stopPropagation();
+            });
+            
+            mainRow.querySelector('.delete-btn').addEventListener('click', (e) => {
+                openDeleteConfirmModal(operation.id);
+                e.stopPropagation();
             });
         }
-        
-        // Função auxiliar para nome das etapas
-        function getStepName(stepKey) {
-            const stepNames = {
-                'abertura': 'Abertura do Caminhão',
-                'carregamento': 'Carregamento do Caminhão',
-                'fechamento': 'Fechamento do Caminhão',
-                'preCinto': 'Pré-Cinto',
-                'aguardandoLacre': 'Aguardando Lacre',
-                'completed': 'Concluído'
-            };
-            return stepNames[stepKey] || stepKey;
+
+        // Criar linha de detalhes
+        function createDetailsRow(operation) {
+            const detailsRow = document.createElement('tr');
+            detailsRow.className = 'details-row';
+            detailsRow.id = `details-${operation.id}`;
+            
+            let detailsHTML = '<td colspan="14"><div class="details-content"><div class="details-grid">';
+            
+            // Informações gerais
+            detailsHTML += `
+                <div class="detail-group">
+                    <span class="detail-label">🆔 ID da Operação:</span>
+                    <span class="detail-value">${operation.id}</span>
+                </div>
+                <div class="detail-group">
+                    <span class="detail-label">👤 Criado por:</span>
+                    <span class="detail-value">${operation.createdBy || 'N/A'}</span>
+                </div>
+                <div class="detail-group">
+                    <span class="detail-label">📝 Observações:</span>
+                    <span class="detail-value">${operation.observation || 'Nenhuma'}</span>
+                </div>
+            `;
+            
+            // Informações específicas
+            if (operation.type === 'simulacao' && operation.endereco) {
+                detailsHTML += `
+                    <div class="detail-group">
+                        <span class="detail-label">📍 Endereço/Área:</span>
+                        <span class="detail-value">${operation.endereco}</span>
+                    </div>
+                `;
+            }
+            
+            if (operation.surfNumber) {
+                detailsHTML += `
+                    <div class="detail-group">
+                        <span class="detail-label">🔢 Número SURF:</span>
+                        <span class="detail-value">${operation.surfNumber}</span>
+                    </div>
+                `;
+            }
+            
+            if (operation.transportType) {
+                detailsHTML += `
+                    <div class="detail-group">
+                        <span class="detail-label">🚚 Tipo de Transporte:</span>
+                        <span class="detail-value">${operation.transportType}</span>
+                    </div>
+                `;
+            }
+            
+            if (operation.pauseReason) {
+                detailsHTML += `
+                    <div class="detail-group">
+                        <span class="detail-label">⏸️ Motivo da Pausa:</span>
+                        <span class="detail-value">${operation.pauseReason}</span>
+                    </div>
+                `;
+            }
+            
+            if (operation.reopenReason) {
+                detailsHTML += `
+                    <div class="detail-group">
+                        <span class="detail-label">▶️ Motivo da Reabertura:</span>
+                        <span class="detail-value">${operation.reopenReason}</span>
+                    </div>
+                `;
+            }
+            
+            detailsHTML += '</div></div></td>';
+            detailsRow.innerHTML = detailsHTML;
+            elements.historyTableBody.appendChild(detailsRow);
         }
-        
+
+        // Funções auxiliares
+        function formatDateTime(timestamp, defaultValue = 'N/A') {
+            if (!timestamp) return defaultValue;
+            return timestamp.toDate().toLocaleString('pt-BR');
+        }
+
+        function getEmployeeName(code) {
+            const employee = employeesData.find(emp => emp.codigo === code);
+            return employee ? `${employee.nome} (${code})` : code || 'N/A';
+        }
+
+        function getOperationType(type) {
+            const types = {
+                'simulacao': { icon: '🖥️', text: 'Simulação' },
+                'enderecamento': { icon: '📍', text: 'Endereçamento' },
+                'shipment': { icon: '🚢', text: 'Shipment' },
+                'carregamento': { icon: '🚛', text: 'Carregamento' }
+            };
+            return types[type] || { icon: '📋', text: type };
+        }
+
+        function getStatusInfo(status) {
+            const statuses = {
+                'completed': { class: 'status-completed', text: '✅ Concluído' },
+                'active': { class: 'status-active', text: '▶️ Em Andamento' },
+                'paused': { class: 'status-paused', text: '⏸️ Pausado' }
+            };
+            return statuses[status] || { class: '', text: status };
+        }
+
+        function calculateTotalTime(operation) {
+            if (!operation.startTime || !operation.endTime) return 'N/A';
+            
+            const start = operation.startTime.toDate();
+            const end = operation.endTime.toDate();
+            const duration = (end - start) / (1000 * 60); // minutos
+            
+            const hours = Math.floor(duration / 60);
+            const minutes = Math.round(duration % 60);
+            
+            return `${hours}h ${minutes}min`;
+        }
+
         // Alternar detalhes
         function toggleDetails(operationId) {
             if (expandedRows.has(operationId)) {
@@ -1699,124 +2283,402 @@
             }
             applyFilters();
         }
-        
+
         // Abrir modal de edição
         function openEditModal(operationId) {
             const operation = operationsData.find(op => op.id === operationId);
-            
             if (!operation) return;
             
             currentEditId = operationId;
             
-            // Preencher formulário
             document.getElementById('editObservation').value = operation.observation || '';
             document.getElementById('editTons').value = operation.tonsLoaded || '';
             document.getElementById('editMix').value = operation.materialMix || '';
             
-            // Mostrar modal
-            editModal.style.display = 'block';
+            showModal(elements.editModal);
         }
-        
-        // Fechar modal de edição
-        function closeEditModal() {
-            editModal.style.display = 'none';
-            currentEditId = null;
-        }
-        
+
         // Salvar edição
-        function saveEdit() {
+        async function saveEdit() {
             if (!currentEditId) return;
             
             const updates = {
                 observation: document.getElementById('editObservation').value,
                 tonsLoaded: parseFloat(document.getElementById('editTons').value) || 0,
-                materialMix: parseInt(document.getElementById('editMix').value) || 0
+                materialMix: parseInt(document.getElementById('editMix').value) || 0,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             
-            // Atualizar no Firestore
-            db.collection('operations').doc(currentEditId).update(updates)
-                .then(() => {
-                    // Atualizar localmente
-                    const operationIndex = operationsData.findIndex(op => op.id === currentEditId);
-                    if (operationIndex !== -1) {
-                        operationsData[operationIndex] = {
-                            ...operationsData[operationIndex],
-                            ...updates
-                        };
-                    }
-                    
-                    // Recarregar dados exibidos
-                    applyFilters();
-                    closeEditModal();
-                })
-                .catch((error) => {
-                    console.error("Erro ao atualizar operação:", error);
-                    alert('Erro ao salvar alterações. Tente novamente.');
-                });
+            const saveBtn = document.getElementById('saveEdit');
+            saveBtn.textContent = '💾 Salvando...';
+            saveBtn.disabled = true;
+            
+            try {
+                await db.collection('operations').doc(currentEditId).update(updates);
+                
+                // Atualizar localmente
+                const index = operationsData.findIndex(op => op.id === currentEditId);
+                if (index !== -1) {
+                    operationsData[index] = { ...operationsData[index], ...updates };
+                }
+                
+                applyFilters();
+                hideModal(elements.editModal);
+                showAlert('✅ Alterações salvas com sucesso!', 'success');
+            } catch (error) {
+                console.error("Erro ao atualizar operação:", error);
+                showAlert('❌ Erro ao salvar alterações. Tente novamente.', 'error');
+            } finally {
+                saveBtn.textContent = '💾 Salvar Alterações';
+                saveBtn.disabled = false;
+            }
         }
-        
-        // ========== FUNÇÕES DE EXPORTAÇÃO ==========
-        
-        // Gerar PDF
+
+        // Abrir modal de confirmação de exclusão
+        function openDeleteConfirmModal(operationId) {
+            const operation = operationsData.find(op => op.id === operationId);
+            if (!operation) return;
+            
+            currentDeleteId = operationId;
+            
+            // Preencher informações
+            const operationInfo = document.getElementById('operationInfo');
+            const employeeName = getEmployeeName(operation.employeeCode);
+            const formattedType = getOperationType(operation.type);
+            
+            operationInfo.innerHTML = `
+                <div><strong>🆔 ID:</strong> ${operation.id.substring(0, 12)}...</div>
+                <div><strong>📅 Data/Hora Início:</strong> ${formatDateTime(operation.startTime)}</div>
+                <div><strong>📅 Data/Hora Fim:</strong> ${formatDateTime(operation.endTime, 'Em andamento')}</div>
+                <div><strong>👷 Colaborador:</strong> ${employeeName}</div>
+                <div><strong>🏗️ Tipo:</strong> ${formattedType.icon} ${formattedType.text}</div>
+                <div><strong>📊 Status:</strong> ${getStatusInfo(operation.status).text}</div>
+                <div><strong>🚪 Doca:</strong> ${operation.doca || operation.dock || 'N/A'}</div>
+                <div><strong>🗺️ Destino:</strong> ${operation.destino || operation.destination || 'N/A'}</div>
+                <div><strong>📦 Shipment:</strong> ${operation.shipmentNumber || 'N/A'}</div>
+                <div><strong>⚖️ Toneladas:</strong> ${operation.tonsLoaded || '0'}</div>
+                <div><strong>🧩 Mix:</strong> ${operation.materialMix || '0'}</div>
+            `;
+            
+            showModal(elements.confirmDeleteModal);
+        }
+
+        // Confirmar exclusão
+        async function confirmDeleteOperation() {
+            if (!currentDeleteId) return;
+            
+            const deleteBtn = document.getElementById('confirmDeleteBtn');
+            deleteBtn.textContent = '🗑️ Excluindo...';
+            deleteBtn.disabled = true;
+            
+            try {
+                await db.collection('operations').doc(currentDeleteId).delete();
+                
+                // Remover localmente
+                const index = operationsData.findIndex(op => op.id === currentDeleteId);
+                if (index !== -1) {
+                    operationsData.splice(index, 1);
+                }
+                
+                hideModal(elements.confirmDeleteModal);
+                applyFilters();
+                showAlert('✅ Operação excluída com sucesso!', 'success');
+            } catch (error) {
+                console.error("Erro ao excluir operação:", error);
+                showAlert('❌ Erro ao excluir operação. Tente novamente.', 'error');
+            } finally {
+                deleteBtn.textContent = '🗑️ Excluir Permanentemente';
+                deleteBtn.disabled = false;
+            }
+        }
+
+        // Confirmar mudança de unidade
+        async function confirmUnitChange() {
+            const selectedUnit = document.getElementById('unitSelect').value;
+            
+            if (!selectedUnit) {
+                showAlert('❌ Por favor, selecione uma unidade.', 'error');
+                return;
+            }
+            
+            if (selectedUnit === currentUnit) {
+                hideModal(elements.unitModal);
+                return;
+            }
+            
+            const confirmBtn = document.getElementById('unitConfirmBtn');
+            confirmBtn.textContent = '🔄 Alterando...';
+            confirmBtn.disabled = true;
+            
+            try {
+                await db.collection('users').doc(currentUser.uid).update({
+                    unit: selectedUnit,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                currentUnit = selectedUnit;
+                elements.userUnitInfo.textContent = `🏢 Unidade atual: ${currentUnit}`;
+                
+                // Recarregar dados
+                await loadEmployeesData();
+                if (elements.historyContainer.style.display !== 'none') {
+                    await loadHistoryData();
+                }
+                
+                hideModal(elements.unitModal);
+                showAlert(`✅ Unidade alterada para: ${selectedUnit}`, 'success');
+            } catch (error) {
+                console.error("Erro ao atualizar unidade:", error);
+                showAlert('❌ Erro ao alterar unidade. Tente novamente.', 'error');
+            } finally {
+                confirmBtn.textContent = '✅ Confirmar';
+                confirmBtn.disabled = false;
+            }
+        }
+
+        // Atualizar cards de resumo
+        function updateSummaryCards(data) {
+            const completedOperations = data.filter(op => op.status === 'completed');
+            
+            // Calcular totais
+            const totals = completedOperations.reduce((acc, op) => {
+                acc.tons += op.tonsLoaded || 0;
+                acc.mix += op.materialMix || 0;
+                
+                if (op.startTime && op.endTime) {
+                    const start = op.startTime.toDate();
+                    const end = op.endTime.toDate();
+                    const duration = (end - start) / (1000 * 60);
+                    acc.minutes += duration;
+                }
+                
+                return acc;
+            }, { tons: 0, mix: 0, minutes: 0 });
+            
+            const count = completedOperations.length;
+            
+            // Atualizar elementos
+            document.getElementById('totalTons').textContent = totals.tons.toFixed(1);
+            document.getElementById('totalMix').textContent = totals.mix;
+            document.getElementById('totalOperations').textContent = count;
+            
+            // Formatando tempo
+            const totalHours = Math.floor(totals.minutes / 60);
+            const totalMins = Math.round(totals.minutes % 60);
+            document.getElementById('totalTime').textContent = `${totalHours}h ${totalMins}min`;
+            document.getElementById('totalMinutes').textContent = `${Math.round(totals.minutes)} minutos`;
+            
+            const avgMinutes = count > 0 ? totals.minutes / count : 0;
+            const avgHours = Math.floor(avgMinutes / 60);
+            const avgMins = Math.round(avgMinutes % 60);
+            document.getElementById('avgTime').textContent = `${avgHours}h ${avgMins}min`;
+            document.getElementById('avgMinutes').textContent = `${Math.round(avgMinutes)} minutos`;
+            
+            // Calcular por tipo
+            calculateAverageTimeByType(completedOperations);
+        }
+
+        // Calcular tempo médio por tipo
+        function calculateAverageTimeByType(completedOperations) {
+            const types = ['simulacao', 'enderecamento', 'shipment', 'carregamento'];
+            const elementsMap = {
+                'simulacao': { time: 'avgTimeSimulacao', minutes: 'avgMinutesSimulacao' },
+                'enderecamento': { time: 'avgTimeEnderecamento', minutes: 'avgMinutesEnderecamento' },
+                'shipment': { time: 'avgTimeShipment', minutes: 'avgMinutesShipment' },
+                'carregamento': { time: 'avgTimeCarregamento', minutes: 'avgMinutesCarregamento' }
+            };
+            
+            types.forEach(type => {
+                const typeOperations = completedOperations.filter(op => op.type === type);
+                const typeData = calculateTypeData(typeOperations);
+                const elements = elementsMap[type];
+                
+                if (elements) {
+                    document.getElementById(elements.time).textContent = typeData.time;
+                    document.getElementById(elements.minutes).textContent = typeData.minutes;
+                }
+            });
+        }
+
+        function calculateTypeData(operations) {
+            const totalMinutes = operations.reduce((sum, op) => {
+                if (op.startTime && op.endTime) {
+                    const start = op.startTime.toDate();
+                    const end = op.endTime.toDate();
+                    return sum + (end - start) / (1000 * 60);
+                }
+                return sum;
+            }, 0);
+            
+            const count = operations.length;
+            const avgMinutes = count > 0 ? totalMinutes / count : 0;
+            const hours = Math.floor(avgMinutes / 60);
+            const minutes = Math.round(avgMinutes % 60);
+            
+            return {
+                time: `${hours}h ${minutes}min`,
+                minutes: `${Math.round(avgMinutes)} minutos (${count} ops)`
+            };
+        }
+
+        // Sistema de metas
+        async function loadGoals() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            try {
+                const snapshot = await db.collection('daily_goals')
+                    .where('unit', '==', currentUnit)
+                    .where('date', '==', today)
+                    .where('createdBy', '==', currentUser.uid)
+                    .get();
+                
+                if (!snapshot.empty) {
+                    const doc = snapshot.docs[0];
+                    elements.currentGoals = { id: doc.id, ...doc.data() };
+                    document.getElementById('fixedGoal').value = elements.currentGoals.fixedGoal || '150';
+                    document.getElementById('dailyGoal').value = elements.currentGoals.dailyGoal || '';
+                }
+            } catch (error) {
+                console.error("Erro ao carregar metas:", error);
+            }
+        }
+
+        function calculateTodayAchieved(filteredData = operationsData) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const todayOperations = filteredData.filter(op => {
+                if (op.status !== 'completed' || !op.endTime) return false;
+                const opDate = op.endTime.toDate();
+                return opDate >= today && opDate < tomorrow;
+            });
+            
+            elements.todayAchieved = todayOperations.reduce((sum, op) => sum + (op.tonsLoaded || 0), 0);
+            updateGoalsDisplay();
+        }
+
+        async function saveGoals() {
+            const fixedGoal = parseInt(document.getElementById('fixedGoal').value) || 0;
+            const dailyGoal = parseInt(document.getElementById('dailyGoal').value) || 0;
+            const today = new Date().toISOString().split('T')[0];
+            
+            if (fixedGoal <= 0 || dailyGoal <= 0) {
+                showAlert('❌ Por favor, informe metas válidas.', 'error');
+                return;
+            }
+            
+            const goalData = {
+                unit: currentUnit,
+                date: today,
+                fixedGoal: fixedGoal,
+                dailyGoal: dailyGoal,
+                createdBy: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            const saveBtn = document.getElementById('saveGoals');
+            saveBtn.textContent = '💾 Salvando...';
+            saveBtn.disabled = true;
+            
+            try {
+                if (elements.currentGoals && elements.currentGoals.id) {
+                    await db.collection('daily_goals').doc(elements.currentGoals.id).update(goalData);
+                } else {
+                    const docRef = await db.collection('daily_goals').add(goalData);
+                    elements.currentGoals = { id: docRef.id, ...goalData };
+                }
+                
+                calculateTodayAchieved();
+                showAlert('✅ Metas salvas com sucesso!', 'success');
+            } catch (error) {
+                console.error("Erro ao salvar metas:", error);
+                showAlert('❌ Erro ao salvar metas. Tente novamente.', 'error');
+            } finally {
+                saveBtn.textContent = '💾 Salvar Metas';
+                saveBtn.disabled = false;
+            }
+        }
+
+        function updateGoalsDisplay() {
+            if (!elements.currentGoals) return;
+            
+            const fixedGoal = elements.currentGoals.fixedGoal || 0;
+            const dailyGoal = elements.currentGoals.dailyGoal || 0;
+            const progress = dailyGoal > 0 ? (elements.todayAchieved / dailyGoal) * 100 : 0;
+            const isAchieved = elements.todayAchieved >= dailyGoal;
+            
+            // Atualizar valores
+            document.getElementById('fixedGoalValue').textContent = fixedGoal;
+            document.getElementById('dailyGoalValue').textContent = dailyGoal;
+            document.getElementById('achievedValue').textContent = elements.todayAchieved.toFixed(1);
+            document.getElementById('progressValue').textContent = `${Math.min(progress, 100).toFixed(1)}%`;
+            document.getElementById('currentDailyGoal').textContent = dailyGoal;
+            document.getElementById('currentAchieved').textContent = elements.todayAchieved.toFixed(1);
+            
+            // Atualizar barra de progresso
+            document.getElementById('progressFill').style.width = `${Math.min(progress, 100)}%`;
+            
+            // Atualizar classes dos cards
+            const cards = {
+                'fixedGoalCard': 'goal-card',
+                'dailyGoalCard': 'goal-card',
+                'achievedCard': isAchieved ? 'goal-card achieved' : 'goal-card not-achieved',
+                'progressCard': isAchieved ? 'goal-card achieved' : 'goal-card not-achieved'
+            };
+            
+            Object.entries(cards).forEach(([id, className]) => {
+                document.getElementById(id).className = className;
+            });
+            
+            // Mostrar elementos
+            elements.goalCards.style.display = 'grid';
+            elements.goalProgress.style.display = 'block';
+        }
+
+        // Limpar filtros
+        function clearFilters() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('employeeFilter').value = '';
+            document.getElementById('dockFilter').value = '';
+            document.getElementById('shipmentFilter').value = '';
+            document.getElementById('surfFilter').value = '';
+            document.getElementById('destinoFilter').value = '';
+            
+            applyFilters();
+        }
+
+        // Exportação
         function generatePDF() {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            const doc = new jsPDF('landscape');
             
             // Título
             doc.setFontSize(20);
-            doc.text('Relatório de Operações', 105, 15, { align: 'center' });
+            doc.text('Relatório de Operações', 148, 15, { align: 'center' });
             
-            // Informações da unidade e data
+            // Informações
             doc.setFontSize(12);
             doc.text(`Unidade: ${currentUnit}`, 14, 25);
             doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 32);
             
-            // Filtros aplicados
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            let filtersText = 'Filtros: ';
-            if (startDate) filtersText += `De ${startDate} `;
-            if (endDate) filtersText += `Até ${endDate}`;
-            if (!startDate && !endDate) filtersText += 'Todos os dados';
-            
-            const status = document.getElementById('statusFilter').value;
-            const type = document.getElementById('typeFilter').value;
-            if (status) filtersText += ` | Status: ${status}`;
-            if (type) filtersText += ` | Tipo: ${type}`;
-            
-            doc.text(filtersText, 14, 39);
-            
-            // Dados para a tabela
-            const filteredData = getFilteredData();
-            const tableData = filteredData.map(op => {
-                const start = op.startTime ? op.startTime.toDate().toLocaleString('pt-BR') : 'N/A';
-                const end = op.endTime ? op.endTime.toDate().toLocaleString('pt-BR') : 'Em andamento';
-                const employee = employeesData.find(emp => emp.codigo === op.employeeCode);
-                const employeeName = employee ? employee.nome : op.employeeCode;
-                
-                // Formatar tipo
-                const typeMap = {
-                    'simulacao': 'Simulação',
-                    'enderecamento': 'Endereçamento',
-                    'shipment': 'Shipment',
-                    'carregamento': 'Carregamento'
-                };
-                const formattedType = typeMap[op.type] || op.type;
-                
-                // Formatar status
-                const statusMap = {
-                    'completed': 'Concluído',
-                    'active': 'Em Andamento',
-                    'paused': 'Pausado'
-                };
-                const formattedStatus = statusMap[op.status] || op.status;
+            // Dados da tabela
+            const tableData = getFilteredData().map(op => {
+                const start = formatDateTime(op.startTime);
+                const end = formatDateTime(op.endTime, 'Em andamento');
+                const employeeName = getEmployeeName(op.employeeCode);
                 
                 return [
                     start,
                     end,
                     employeeName,
-                    formattedType,
-                    formattedStatus,
+                    getOperationType(op.type).text,
+                    getStatusInfo(op.status).text,
                     op.doca || op.dock || 'N/A',
                     op.destino || op.destination || 'N/A',
                     op.shipmentNumber || 'N/A',
@@ -1827,48 +2689,35 @@
             
             // Adicionar tabela
             doc.autoTable({
-                startY: 45,
+                startY: 40,
                 head: [['Início', 'Fim', 'Colaborador', 'Tipo', 'Status', 'Doca', 'Destino', 'Shipment', 'Toneladas', 'Mix']],
                 body: tableData,
                 styles: { fontSize: 8 },
                 headStyles: { fillColor: [74, 109, 167] }
             });
             
-            // Resumo
-            const finalY = doc.lastAutoTable.finalY + 10;
-            doc.setFontSize(14);
-            doc.text('Resumo', 14, finalY);
+            // Salvar
+            const filename = `relatorio_operacoes_${currentUnit}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(filename);
             
-            doc.setFontSize(10);
-            doc.text(`Total de Operações: ${totalOperationsElement.textContent}`, 14, finalY + 8);
-            doc.text(`Volume Total: ${totalTonsElement.textContent} toneladas`, 14, finalY + 16);
-            doc.text(`Mix Total: ${totalMixElement.textContent} tipos`, 14, finalY + 24);
-            doc.text(`Tempo Total: ${totalTimeElement.textContent}`, 14, finalY + 32);
-            doc.text(`Tempo Médio: ${avgTimeElement.textContent} por operação`, 14, finalY + 40);
-            
-            // Salvar PDF
-            doc.save(`relatorio_operacoes_${currentUnit}_${new Date().toISOString().split('T')[0]}.pdf`);
+            showAlert('✅ PDF exportado com sucesso!', 'success');
         }
-        
-        // Gerar CSV filtrado
+
         function generateCSV() {
-            const filteredData = getFilteredData();
-            exportToCSV(filteredData, 'filtrado');
+            const data = getFilteredData();
+            exportToCSV(data, 'filtrado');
         }
-        
-        // Gerar CSV completo
+
         function generateFullCSV() {
             exportToCSV(operationsData, 'completo');
         }
-        
-        // Exportar dados para CSV
+
         function exportToCSV(data, tipo = 'filtrado') {
             if (data.length === 0) {
-                alert('Não há dados para exportar.');
+                showAlert('❌ Não há dados para exportar.', 'error');
                 return;
             }
             
-            // Definir cabeçalhos
             const headers = [
                 'ID',
                 'Data/Hora Início',
@@ -1895,38 +2744,14 @@
                 'Data de Criação'
             ];
             
-            // Preparar dados
             const csvData = data.map(operation => {
-                const start = operation.startTime ? operation.startTime.toDate() : new Date(0);
-                const end = operation.endTime ? operation.endTime.toDate() : new Date(0);
-                const startStr = start.toLocaleString('pt-BR');
-                const endStr = end > new Date(0) ? end.toLocaleString('pt-BR') : 'Em andamento';
+                const start = formatDateTime(operation.startTime, '');
+                const end = formatDateTime(operation.endTime, '');
+                const employeeName = getEmployeeName(operation.employeeCode);
+                const typeText = getOperationType(operation.type).text;
+                const statusText = getStatusInfo(operation.status).text;
                 
-                // Encontrar nome do colaborador
-                let employeeName = operation.employeeName || 'N/A';
-                const employee = employeesData.find(emp => emp.codigo === operation.employeeCode);
-                if (employee) {
-                    employeeName = employee.nome;
-                }
-                
-                // Formatar tipo
-                const typeMap = {
-                    'simulacao': 'Simulação',
-                    'enderecamento': 'Endereçamento/Locate',
-                    'shipment': 'Shipment',
-                    'carregamento': 'Carregamento de Carga'
-                };
-                const formattedType = typeMap[operation.type] || operation.type;
-                
-                // Formatar status
-                const statusMap = {
-                    'completed': 'Concluído',
-                    'active': 'Em Andamento',
-                    'paused': 'Pausado'
-                };
-                const formattedStatus = statusMap[operation.status] || operation.status;
-                
-                // Calcular tempo total em minutos
+                // Calcular tempo total
                 let totalMinutes = 0;
                 if (operation.startTime && operation.endTime) {
                     const startDate = operation.startTime.toDate();
@@ -1934,56 +2759,38 @@
                     totalMinutes = Math.round((endDate - startDate) / (1000 * 60));
                 }
                 
-                // Formatar outros colaboradores
-                const otherLoaders = operation.additionalLoaders ? 
-                    operation.additionalLoaders.join('; ') : 
-                    'Nenhum';
-                
-                // Data de criação
-                const createdAt = operation.createdAt ? 
-                    operation.createdAt.toDate().toLocaleString('pt-BR') : 
-                    'N/A';
-                
-                // Obter informações específicas por tipo
-                const enderecoArea = operation.endereco || '';
-                const transportType = operation.transportType || '';
-                const shipmentId = operation.shipmentId || '';
-                const surfInfo = operation.surfNumber || operation.surfCode || '';
-                
                 return [
                     operation.id,
-                    `"${startStr}"`,
-                    `"${endStr}"`,
+                    `"${start}"`,
+                    `"${end}"`,
                     `"${employeeName}"`,
-                    operation.employeeCode || 'N/A',
-                    `"${otherLoaders}"`,
-                    formattedType,
-                    formattedStatus,
-                    operation.doca || operation.dock || 'N/A',
-                    operation.destino || operation.destination || 'N/A',
-                    operation.shipmentNumber || 'N/A',
-                    surfInfo,
+                    operation.employeeCode || '',
+                    `"${operation.additionalLoaders ? operation.additionalLoaders.join('; ') : ''}"`,
+                    typeText,
+                    statusText,
+                    operation.doca || operation.dock || '',
+                    operation.destino || operation.destination || '',
+                    operation.shipmentNumber || '',
+                    operation.surfNumber || operation.surfCode || '',
                     operation.tonsLoaded || '0',
                     operation.materialMix || '0',
                     totalMinutes,
                     `"${operation.observation || ''}"`,
                     `"${operation.pauseReason || ''}"`,
                     `"${operation.reopenReason || ''}"`,
-                    `"${enderecoArea}"`,
-                    transportType,
-                    shipmentId,
+                    `"${operation.endereco || ''}"`,
+                    operation.transportType || '',
+                    operation.shipmentId || '',
                     operation.unit || currentUnit,
-                    `"${createdAt}"`
+                    `"${operation.createdAt ? operation.createdAt.toDate().toLocaleString('pt-BR') : ''}"`
                 ];
             });
             
-            // Criar conteúdo CSV
             let csvContent = headers.join(',') + '\n';
             csvData.forEach(row => {
                 csvContent += row.join(',') + '\n';
             });
             
-            // Criar blob e fazer download
             const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
@@ -1999,346 +2806,73 @@
             
             URL.revokeObjectURL(url);
             
-            // Mostrar mensagem de sucesso
-            alert(`CSV exportado com sucesso! ${data.length} registros exportados.`);
+            showAlert(`✅ CSV exportado com sucesso! ${data.length} registros exportados.`, 'success');
         }
-        
-        // Obter dados filtrados atuais
+
         function getFilteredData() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const status = document.getElementById('statusFilter').value;
-            const type = document.getElementById('typeFilter').value;
-            const employee = document.getElementById('employeeFilter').value;
-            const dock = document.getElementById('dockFilter').value.toLowerCase();
-            const shipment = document.getElementById('shipmentFilter').value.toLowerCase();
-            const surf = document.getElementById('surfFilter').value.toLowerCase();
-            const destino = document.getElementById('destinoFilter').value.toLowerCase();
-            
-            let filteredData = operationsData;
-            
-            // Usar a função corrigida de filtro de data
-            filteredData = filterByDate(filteredData, startDate, endDate);
-            
-            if (status) filteredData = filteredData.filter(op => op.status === status);
-            if (type) filteredData = filteredData.filter(op => op.type === type);
-            if (employee) {
-                filteredData = filteredData.filter(op => 
-                    op.employeeCode === employee || 
-                    (op.additionalLoaders && op.additionalLoaders.includes(employee))
-                );
-            }
-            if (dock) {
-                filteredData = filteredData.filter(op => 
-                    (op.doca && op.doca.toLowerCase().includes(dock)) ||
-                    (op.dock && op.dock.toLowerCase().includes(dock))
-                );
-            }
-            if (shipment) {
-                filteredData = filteredData.filter(op => 
-                    (op.shipmentNumber && op.shipmentNumber.toLowerCase().includes(shipment)) ||
-                    (op.shipmentId && op.shipmentId.toLowerCase().includes(shipment))
-                );
-            }
-            if (surf) {
-                filteredData = filteredData.filter(op => 
-                    (op.surfNumber && op.surfNumber.toLowerCase().includes(surf)) ||
-                    (op.surfCode && op.surfCode.toLowerCase().includes(surf))
-                );
-            }
-            if (destino) {
-                filteredData = filteredData.filter(op => 
-                    (op.destino && op.destino.toLowerCase().includes(destino)) ||
-                    (op.destination && op.destination.toLowerCase().includes(destino))
-                );
-            }
-            
-            return filteredData;
-        }
-        
-        // Mostrar loading do histórico
-        function showHistoryLoading() {
-            historyLoading.style.display = 'flex';
-            historyNoData.style.display = 'none';
-            historyTable.style.display = 'none';
-        }
-        
-        // Ocultar loading do histórico
-        function hideHistoryLoading() {
-            historyLoading.style.display = 'none';
-        }
-        
-        // Mostrar erro do histórico
-        function showHistoryError(message) {
-            historyLoading.style.display = 'none';
-            historyNoData.textContent = message;
-            historyNoData.style.display = 'block';
-            historyTable.style.display = 'none';
-        }
-        
-        // Limpar filtros
-        function clearFilters() {
-            document.getElementById('startDate').value = '';
-            document.getElementById('endDate').value = '';
-            document.getElementById('statusFilter').value = '';
-            document.getElementById('typeFilter').value = '';
-            document.getElementById('employeeFilter').value = '';
-            document.getElementById('dockFilter').value = '';
-            document.getElementById('shipmentFilter').value = '';
-            document.getElementById('surfFilter').value = '';
-            document.getElementById('destinoFilter').value = '';
-            
-            applyFilters();
-        }
-        
-        // Funções para mudança de unidade
-        function openUnitModal() {
-            unitSelect.value = currentUnit;
-            unitModal.style.display = 'block';
-        }
-        
-        function closeUnitModal() {
-            unitModal.style.display = 'none';
-        }
-        
-        function confirmUnitChange() {
-            const selectedUnit = unitSelect.value;
-            
-            if (!selectedUnit) {
-                alert('Por favor, selecione uma unidade.');
-                return;
-            }
-            
-            if (selectedUnit === currentUnit) {
-                alert('Você já está nesta unidade.');
-                closeUnitModal();
-                return;
-            }
-            
-            db.collection('users').doc(currentUser.uid).update({
-                unit: selectedUnit
-            })
-            .then(() => {
-                currentUnit = selectedUnit;
-                userUnitInfo.textContent = `Unidade atual: ${currentUnit}`;
-                loadEmployeesData();
-                
-                if (historyContainer.style.display !== 'none') {
-                    loadHistoryData();
-                }
-                
-                closeUnitModal();
-                alert(`Unidade alterada para: ${selectedUnit}`);
-            })
-            .catch((error) => {
-                console.error("Erro ao atualizar unidade:", error);
-                alert('Erro ao alterar unidade. Tente novamente.');
-            });
-        }
-
-        // ========== SISTEMA DE METAS ==========
-        
-        // Carregar metas do usuário
-        function loadGoals() {
-            const today = new Date().toISOString().split('T')[0];
-            
-            db.collection('daily_goals')
-                .where('unit', '==', currentUnit)
-                .where('date', '==', today)
-                .where('createdBy', '==', currentUser.uid)
-                .get()
-                .then((querySnapshot) => {
-                    if (!querySnapshot.empty) {
-                        // Já existe meta para hoje
-                        const doc = querySnapshot.docs[0];
-                        currentGoals = {
-                            id: doc.id,
-                            ...doc.data()
-                        };
-                        
-                        // Preencher formulário
-                        fixedGoalInput.value = currentGoals.fixedGoal || '';
-                        dailyGoalInput.value = currentGoals.dailyGoal || '';
-                        
-                        // Calcular realizado do dia
-                        calculateTodayAchieved();
-                    } else {
-                        // Criar meta padrão se não existir
-                        currentGoals = null;
-                        fixedGoalInput.value = '150'; // Meta fixa padrão
-                        dailyGoalInput.value = '';
-                        
-                        // Calcular realizado do dia
-                        calculateTodayAchieved();
-                    }
-                })
-                .catch((error) => {
-                    console.error("Erro ao carregar metas:", error);
-                });
-        }
-
-        // Calcular toneladas realizadas hoje
-        function calculateTodayAchieved() {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            // Filtrar operações completadas hoje
-            const todayOperations = operationsData.filter(op => {
-                if (op.status !== 'completed' || !op.endTime) return false;
-                
-                const opDate = op.endTime.toDate();
-                return opDate >= today && opDate < tomorrow;
-            });
-            
-            // Somar toneladas
-            todayAchieved = todayOperations.reduce((sum, op) => sum + (op.tonsLoaded || 0), 0);
-            
-            // Atualizar interface
-            updateGoalsDisplay();
-        }
-
-        // Salvar metas
-        function saveGoals() {
-            const fixedGoal = parseInt(fixedGoalInput.value) || 0;
-            const dailyGoal = parseInt(dailyGoalInput.value) || 0;
-            const today = new Date().toISOString().split('T')[0];
-            
-            if (fixedGoal <= 0) {
-                alert('Por favor, informe uma meta fixa válida.');
-                return;
-            }
-            
-            if (dailyGoal <= 0) {
-                alert('Por favor, informe uma meta diária válida.');
-                return;
-            }
-            
-            const goalData = {
-                unit: currentUnit,
-                date: today,
-                fixedGoal: fixedGoal,
-                dailyGoal: dailyGoal,
-                createdBy: currentUser.uid,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            const filters = {
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                status: document.getElementById('statusFilter').value,
+                type: document.getElementById('typeFilter').value,
+                employee: document.getElementById('employeeFilter').value,
+                dock: document.getElementById('dockFilter').value.toLowerCase(),
+                shipment: document.getElementById('shipmentFilter').value.toLowerCase(),
+                surf: document.getElementById('surfFilter').value.toLowerCase(),
+                destino: document.getElementById('destinoFilter').value.toLowerCase()
             };
             
-            if (currentGoals && currentGoals.id) {
-                // Atualizar meta existente
-                db.collection('daily_goals').doc(currentGoals.id).update(goalData)
-                    .then(() => {
-                        currentGoals = { ...currentGoals, ...goalData };
-                        calculateTodayAchieved();
-                        alert('Metas atualizadas com sucesso!');
-                    })
-                    .catch((error) => {
-                        console.error("Erro ao atualizar metas:", error);
-                        alert('Erro ao salvar metas. Tente novamente.');
-                    });
-            } else {
-                // Criar nova meta
-                db.collection('daily_goals').add(goalData)
-                    .then((docRef) => {
-                        currentGoals = {
-                            id: docRef.id,
-                            ...goalData
-                        };
-                        calculateTodayAchieved();
-                        alert('Metas salvas com sucesso!');
-                    })
-                    .catch((error) => {
-                        console.error("Erro ao salvar metas:", error);
-                        alert('Erro ao salvar metas. Tente novamente.');
-                    });
-            }
+            return filterOperations(operationsData, filters);
         }
 
-        // Atualizar exibição das metas
-        function updateGoalsDisplay() {
-            if (!currentGoals) return;
-            
-            const fixedGoal = currentGoals.fixedGoal || 0;
-            const dailyGoal = currentGoals.dailyGoal || 0;
-            const progress = dailyGoal > 0 ? (todayAchieved / dailyGoal) * 100 : 0;
-            const isAchieved = todayAchieved >= dailyGoal;
-            
-            // Atualizar valores
-            fixedGoalValue.textContent = fixedGoal;
-            dailyGoalValue.textContent = dailyGoal;
-            achievedValue.textContent = todayAchieved.toFixed(1);
-            progressValue.textContent = `${Math.min(progress, 100).toFixed(1)}%`;
-            currentDailyGoal.textContent = dailyGoal;
-            currentAchieved.textContent = todayAchieved.toFixed(1);
-            
-            // Atualizar barra de progresso
-            progressFill.style.width = `${Math.min(progress, 100)}%`;
-            
-            // Atualizar cores dos cards
-            fixedGoalCard.className = 'goal-card';
-            dailyGoalCard.className = 'goal-card';
-            achievedCard.className = isAchieved ? 'goal-card achieved' : 'goal-card not-achieved';
-            progressCard.className = isAchieved ? 'goal-card achieved' : 'goal-card not-achieved';
-            
-            // Mostrar elementos
-            goalCards.style.display = 'grid';
-            goalProgress.style.display = 'block';
+        // Funções auxiliares de UI
+        function showHistoryLoading() {
+            elements.historyLoading.style.display = 'flex';
+            elements.historyNoData.style.display = 'none';
+            elements.historyTable.style.display = 'none';
         }
-        
-        // ========== EVENT LISTENERS ==========
-        
-        passwordBtn.addEventListener('click', checkPassword);
-        passwordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') checkPassword();
-        });
-        
-        document.getElementById('applyFilters').addEventListener('click', applyFilters);
-        document.getElementById('clearFilters').addEventListener('click', clearFilters);
-        generatePDFBtn.addEventListener('click', generatePDF);
-        generateCSVBtn.addEventListener('click', generateCSV);
-        generateFullCSVBtn.addEventListener('click', generateFullCSV);
-        
-        document.getElementById('closeModal').addEventListener('click', closeEditModal);
-        document.getElementById('cancelEdit').addEventListener('click', closeEditModal);
-        document.getElementById('saveEdit').addEventListener('click', saveEdit);
-        
-        changeUnitBtn.addEventListener('click', openUnitModal);
-        unitCloseBtn.addEventListener('click', closeUnitModal);
-        unitCancelBtn.addEventListener('click', closeUnitModal);
-        unitConfirmBtn.addEventListener('click', confirmUnitChange);
-        
-        // Event Listeners para metas
-        saveGoalsBtn.addEventListener('click', saveGoals);
-        
-        window.addEventListener('click', (e) => {
-            if (e.target === editModal) closeEditModal();
-            if (e.target === unitModal) closeUnitModal();
-        });
-        
-        // Destacar link ativo na navbar
-        const currentPage = window.location.pathname.split('/').pop();
-        const navLinks = document.querySelectorAll('.nav-links a');
-        
-        navLinks.forEach(link => {
-            const linkPage = link.getAttribute('href');
-            if (currentPage === linkPage) {
-                link.classList.add('active');
-            } else {
-                link.classList.remove('active');
-            }
-        });
-        
+
+        function hideHistoryLoading() {
+            elements.historyLoading.style.display = 'none';
+        }
+
+        function showHistoryError(message) {
+            elements.historyLoading.style.display = 'none';
+            elements.historyNoData.textContent = message;
+            elements.historyNoData.style.display = 'block';
+            elements.historyTable.style.display = 'none';
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} fade-in`;
+            alertDiv.innerHTML = message;
+            
+            // Remover alertas anteriores
+            document.querySelectorAll('.alert').forEach(alert => alert.remove());
+            
+            document.body.appendChild(alertDiv);
+            
+            // Remover após 5 segundos
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
         // Logout
-        document.querySelector('.logout-btn').addEventListener('click', function() {
+        function logout() {
             if (confirm('Tem certeza que deseja sair do sistema?')) {
                 auth.signOut().then(() => {
                     window.location.href = 'index.html';
                 }).catch((error) => {
                     console.error('Erro ao fazer logout:', error);
+                    showAlert('❌ Erro ao fazer logout.', 'error');
                 });
             }
-        });
+        }
+
+        // Inicializar aplicação quando o DOM estiver carregado
+        document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
